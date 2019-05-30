@@ -1,3 +1,39 @@
+### 安装使用
+小程序组件化开发框架 https://tencent.github.io/wepy/
+#### 安装（更新） wepy 命令行工具。
+
+```console
+npm install wepy-cli -g
+```
+
+#### 安装依赖
+
+```console
+npm install
+```
+
+#### 开发实时编译
+
+```console
+npm run dev
+```
+#### 开发打包web
+
+```console
+npm run dev:web
+```
+
+#### 生产编译
+
+```console
+npm run build
+```
+#### 生产编译
+```console
+```
+打开微信开发者工具导入项目
+关闭es6转es5
+压缩等
 
 ```js
 import initCalendar from '../../component/calendar/main.js';
