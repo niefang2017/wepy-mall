@@ -29,11 +29,12 @@ npm run dev:web
 ```console
 npm run build
 ```
-#### 生产编译
+#### 预览
 打开微信开发者工具导入项目
 
 关闭开发者工具上es6转es5压缩等
 
+#### 日历插件使用
 ```js
 import initCalendar from '../../component/calendar/main.js';
 
