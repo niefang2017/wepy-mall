@@ -1,5 +1,6 @@
 ### 安装使用
 小程序组件化开发框架 https://tencent.github.io/wepy/
+本项目微信小程序商城,使用redux进行状态管理
 #### 安装（更新） wepy 命令行工具。
 
 ```console
@@ -29,11 +30,9 @@ npm run dev:web
 npm run build
 ```
 #### 生产编译
-```console
-```
 打开微信开发者工具导入项目
-关闭es6转es5
-压缩等
+
+关闭开发者工具上es6转es5压缩等
 
 ```js
 import initCalendar from '../../component/calendar/main.js';
