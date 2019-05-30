@@ -1,0 +1,279 @@
+<!-- mine-list 我的账号 -->
+<template>
+  <view class="mine-list-container {{openType===1?'select':''}}">
+    <view class="card-box">
+      <repeat for="{{list}}" key="index" index="index" item="item">
+        <view class="pr">
+          <icon class="check-icon" wx:if="{{openType===1}}" @tap.stop="checkEvent({{index}})" type="success" size="20" color="{{checkId===item.id?'red':'rgb(153,153,153)'}}" />
+          <view class="item" @longpress="del({{index}})" @tap="edit({{item.id}})">
+            <view class="head">
+              <image src="{{item.sex ==='2'?images[1]:images[0]}}" lazy-load="true"></image>
+            </view>
+            <view class="h3 text">
+              <view>{{item.name}}</view>
+              <view class="h4 birthday">{{item.birthday}}</view>
+            </view>
+            <view wx:if="{{item.isCheck==='1'}}" class="h4 check">
+              {{item.isCheck==='1'?'默认':''}}
+            </view>
+            <view class="edit">
+              <i class="iconfont icon-edit-user"></i>
+            </view>
+          </view>
+        </view>
+      </repeat>
+    </view>
+    <view class="no-list" wx:if="{{list.length===0}}">
+      <i class="iconfont icon-mingpian"></i>
+    </view>
+    <view class="btn-area h4">
+      <navigator wx:if="{{list.length<5}}" url="/pages/mine-info" class="btn"><i class="iconfont icon-jia"></i>添加学员</navigator>
+      <view class="tip h5">最多可关联5名学员，长按删除</view>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import {
+    UPDATE_STUDENT_INFO
+  } from '@/store/types/goods'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Minelist extends wepy.page {
+    config = {
+      navigationBarTitleText: "我的账号",
+    };
+
+    data = {
+      list:[],
+      images:['../static/images/man.png','../static/images/woman.png'],
+      openType:0,
+      checkId:''
+    };
+
+    components = {};
+
+    methods = {
+      checkEvent(index){
+        let studentInfo = this.list[index];
+        this.checkId = studentInfo.id; 
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_STUDENT_INFO,
+          studentInfo: studentInfo
+        })
+        wepy.navigateBack({
+          delta: 1
+        });
+        
+      },
+      edit(id){
+        let url=`/pages/mine-info?id=${id}`
+        wepy.navigateTo({ url: url });
+        
+      },
+      del(e){
+        let opt = this.list[e]
+        tip.confirm(`删除${opt.name}信息？`).then((result) => {
+          this.delUser(opt.id);
+        }).catch((err) => {
+          console.log('用户点击取消')
+        });
+        
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    onLoad(e) {
+      this.openType = e.type?Number(e.type):0;
+    };
+
+    async onShow() { 
+      await this.getPersonInfo();
+    };
+    async getPersonInfo(){
+      let res = await api.studentInfo({
+        query: {
+          method: 'LoadStudents',
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        this.list = res.data;
+        this.$apply();
+        let studentInfo = wepy.getStorageSync('studentInfo');
+        if(!res.data || res.data.length===0) return
+        if(studentInfo==='' || !studentInfo){
+          for (let i = 0; i < res.data.length; i++) {
+            if (Number(res.data[i].isCheck)===1) {
+              wepy.setStorageSync('studentInfo',res.data[i]);
+              break;
+            }
+          }
+        }
+      }else{
+        return tip.toast({
+          title: res.msg || '查询信息异常',
+          icon: 'none'
+        })
+      }
+    }
+    async delUser(id){
+      let res = await api.studentInfo({
+        query: {
+          method: 'DeleteStudentInfo',
+          FSTUDENTID:id
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        tip.success('删除成功')
+        
+        let studentInfo = wepy.getStorageSync('studentInfo');
+        if(studentInfo && studentInfo.FSTUDENTID ===id){
+          wepy.removeStorageSync('studentInfo');
+        }
+        let list = this.list.filter(obj=> obj.id !== id)
+        this.list = list;
+        this.$apply();
+        // await this.getPersonInfo();
+      }else{
+        return tip.toast({
+          title: res.msg || '删除用户信息异常',
+          icon: 'none'
+        })
+      }
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+.mine-list-container{
+  &.select{
+    .card-box{
+      position: relative;
+      .pr{
+        position: relative;
+        margin-bottom: 26rpx;
+        >.check-icon{
+          width: 106rpx;
+          padding: 80rpx 0;
+          top: 50%;
+          left: -26rpx;
+          text-align: center;
+          transform: translate3d(0,-50%,0);
+          position: absolute;
+        }
+      }
+      .item{
+        margin-left: 80rpx;
+
+      }
+    }
+  }
+  .navigator-hover{
+    background-color: transparent;
+  }
+  .no-list{
+    margin-top: 200rpx;
+    text-align: center;
+    .icon-mingpian{
+      color: @bg-d;
+      font-size: 360rpx;
+    }
+  }
+  .tip{
+    color: @bg-d;
+  }
+  .card-box{
+    padding: 26rpx;
+    .pr{
+      margin-bottom: 26rpx;
+    }
+    .item{
+      box-sizing: border-box;
+      padding: 30rpx;
+      height: 300rpx;
+      border-radius: 30rpx;
+      position: relative;
+      display: flex;
+      align-items: center;
+      color: @color-white;
+      background-image: linear-gradient(270deg, @color-default, @color-primary-red);
+      margin-bottom: 30rpx;
+      &:last-child{
+        margin-bottom: 0;
+      }
+      .head{
+        width: 80rpx;
+        height: 80rpx;
+        padding: 10rpx;
+        margin-right: 26rpx;
+        background-color: @bg-white;
+        line-height: 100rpx;
+        border-radius: 50%;
+        text-align: center;
+        overflow: hidden;
+        image{
+          width: 80rpx;
+          height: 80rpx;
+          border-radius: 50%;
+        }
+      }
+      .text{
+        view{
+          &:first-child{
+            margin-bottom: 20rpx;
+          }
+        }
+      }
+      .check{
+        position: absolute;
+        top: 20rpx;
+        left: 20rpx;
+        width: 100rpx;
+        height: 60rpx;
+      }
+      .edit{
+        width: 60rpx;
+        height: 60rpx;
+        line-height: 60rpx;
+        text-align: center;
+        right: 20rpx;
+        top: 20rpx;
+        position: absolute;
+        i{
+          font-size: 40rpx;
+        }
+      }
+    }
+  }
+  .btn-area{
+    margin: 30rpx auto;
+    text-align: center;
+    .btn{
+      width: 400rpx;
+      height: 80rpx;
+      border-radius: 40rpx;
+      background-color: @color-default;
+      color: @color-white;
+      text-align: center;
+      line-height: 80rpx;
+      margin:0 auto 40rpx;
+      i{
+        margin-right: 26rpx;
+      }
+    }
+  }
+}
+</style>

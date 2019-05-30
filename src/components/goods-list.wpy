@@ -1,0 +1,122 @@
+<!-- goods-list 商品列表组件 -->
+<template>
+  <view class='good-container'>
+    <scroll-view scroll-y="true" class="swiper-item-box">
+      <view class="shop-item">
+        <repeat for="{{list}}" key="index" index="index" item="item">
+          <view class="list" @tap.stop="goDetail({{item.id}})">
+            <view class="image-box">
+              <image src="{{item.Icon}}" mode="scaleToFill" lazy-load="true"></image>
+            </view>
+            <view class="goods">
+              <view class="h4 product-name">{{item.Name}}</view>
+              <!-- <view class="h5 product-desc">{{item.desc}}</view> -->
+              <view class="product-info">
+                <view class="h4 price">￥{{item.Price}}</view>
+                <!-- <view class="h5 dis-price">￥{{item.Price}}</view> -->
+                <!-- <view class="sale-num">销量{{item.saleCount}}件</view> -->
+              </view>
+            </view>
+          </view>
+        </repeat>
+      </view>
+    </scroll-view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class GoodsList extends wepy.component {
+    props = {
+      list: [],
+      old: String
+    };
+    data = {
+      noImg: '../../static/images/no_image.png'
+    };
+    components = {};
+    methods = {
+      goDetail(e) {
+        let old = this.data.old?this.data.old:'';
+        let url = `/pages/course-detail?id=${e}`;
+        if(old){
+          url=url+`&type=transform&oldOrderId=${old}`
+        }
+        wepy.navigateTo({
+          url: url
+        });
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {};
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .shop-item {
+    padding: 10rpx;
+    background: @bg-primary;
+    display: flex;
+    flex-wrap: wrap;
+    padding-bottom: 30rpx;
+  }
+  // .list:nth-child(odd) {
+  //   margin-right: 10rpx;
+  // }
+  .list {
+    background: @bg-white;
+    margin-top: 15rpx;
+    margin: 10rpx;
+    width: 345rpx;
+    .image-box {
+      width: 100%;
+      height: 345rpx;
+      background-color: @bg-d;
+      image {
+        width: 100%;
+        height: 345rpx;
+        display: block;
+      }
+    }
+    .product-name,
+    .product-desc {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      word-break: break-all;
+    }
+    .product-desc {
+      color: @color-gray;
+      margin-top: 10rpx;
+    }
+    .price {
+      color: @color-danger;
+    }
+    .dis-price {
+      color: @color-9;
+      text-decoration: line-through;
+    }
+    .sale-num {
+      color: @color-6;
+      font-size: 22rpx;
+    }
+    .goods {
+      padding: 15rpx 12rpx;
+    }
+    .product-info {
+      padding-top: 20rpx;
+      display: flex;
+      align-items: flex-end;
+    }
+    .dis-price {
+      padding-left: 20rpx;
+    }
+    .sale-num {
+      padding-left: 20rpx;
+    }
+  }
+</style>

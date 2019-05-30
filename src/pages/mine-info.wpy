@@ -1,0 +1,412 @@
+<!-- information 个人信息 -->
+<template>
+  <view class='information-container h4'>
+    <form report-submit="true" @submit="submit" @reset="reset">
+      <view class="section">
+        <view class="section-title">中文名</view>
+        <input value="{{studentInfo.name}}" type="text" name="FNAME" placeholder="请输入中文姓名" placeholder-class="placeholder" maxlength="20"/>
+      </view>
+      <view class="section">
+        <view class="section-title">英文名</view>
+        <input value="{{studentInfo.englishName}}" type="text" name="FNAMEEN" placeholder="请输入英文姓名" placeholder-class="placeholder" maxlength="20"/>
+      </view>
+      <view class="section">
+        <view class="section-title">性别</view>
+        <radio-group class="radio-group" name="FSEX">
+          <label class="radio" wx:for="{{sexArr}}">
+            <radio value="{{item.value}}" checked="{{item.checked}}" />
+            {{item.name}}
+          </label>
+        </radio-group>
+      </view>
+      <view class="section">
+        <view class="section-title">出生日期</view>
+        <picker
+          mode="date"
+          value="{{dateOpts.date}}"
+          start="{{dateOpts.start}}"
+          end="{{dateOpts.end}}"
+          bindchange="bindDateChange"
+        >
+          <view class="picker">
+            {{dateOpts.date}} <i class="iconfont icon-xiangyoujiantou"></i>
+          </view>
+        </picker>
+      </view>
+      <view class="section">
+        <view class="section-title">居住片区</view>
+        <input value="{{address}}" type="text" name="FLiveArea" placeholder="请输入居住片区" placeholder-class="placeholder" @blur="editAddress" maxlength="50"/>
+         <i class="iconfont icon-point" @tap="gelocation"></i>
+      </view>
+      <view class="section">
+        <view class="section-title">上课片区</view>
+        <picker bindchange="schoolAddrChange" name="FENTRYID" value="{{schoolIndex}}" range-key="FName" range="{{classAreas}}">
+          <view class="picker h5">
+            <view>{{classAreas[schoolIndex].FName}} <i class="iconfont icon-xiangyoujiantou"></i></view>
+          </view>
+        </picker>
+      </view>
+      <view class="section">
+        <view class="section-title">个人手机</view>
+        <input value="{{studentInfo.myPhone}}" type="text" name="FPhone" placeholder="请输入个人手机号" placeholder-class="placeholder" maxlength="11" confirm-type="done" bindconfirm="vailTel" @blur="vailTel"/> 
+      </view>
+      <view class="section">
+        <view class="section-title">父亲手机</view>
+        <input value="{{studentInfo.fatherPhone}}" type="text" name="FFatherPhone" placeholder="请输入父亲手机号" placeholder-class="placeholder" maxlength="11" confirm-type="done" bindconfirm="vailTel" @blur="vailTel"/> 
+      </view>
+      <view class="section">
+        <view class="section-title">母亲手机</view>
+        <input value="{{studentInfo.motherPhone}}" type="text" name="FMotherPhone" placeholder="请输入母亲手机号" placeholder-class="placeholder" maxlength="11" confirm-type="done" bindconfirm="vailTel" @blur="vailTel"/> 
+      </view>
+      <view class="switch-box section">
+        <view class="section-title">设置为默认学员</view>
+        <switch checked="{{switchChecked}}" type="switch" color="#ff6a3c" @change="switchChange" />
+      </view>
+      <view class="btn-area">
+        <button class="btn btn-red" form-type="submit">提交</button>
+        <!-- <button form-type="reset">重置</button> -->
+      </view>
+    </form>
+    <zanToptips/>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import zanToptips from '@/components/common/zan-toptips'
+  import util from '../utils/util'
+  export default class Information extends wepy.page {
+    config = {
+      navigationBarTitleText: "个人信息",
+    };
+
+    data = {
+      studentInfo:{},
+      FSTUDENTID:null,
+      schoolIndex: null,
+      classAreas: [],
+      switchChecked:true,
+      sexArr:[
+        {
+          name:"男",
+          value:1,
+          checked:true
+        },
+        {
+          name:"女",
+          value:2,
+          checked:false
+        }
+      ],
+      address:'',
+      dateOpts:{
+        date:'',
+        start: '1949-10-01',
+        end: `${new Date().getFullYear()}-${new Date().getMonth()+1}-${new Date().getDate()}`
+      },
+      openSettingStatus: false
+    };
+
+    components = {
+      zanToptips:zanToptips
+    };
+
+    methods = {
+      submit(e){
+        let param = Object.assign({},e.detail.value,{FBIRTHDAY:this.dateOpts.date})
+        console.log('提交',e,param)
+        if(this.FSTUDENTID){
+          param.FSTUDENTID = this.FSTUDENTID;
+        }
+        param.FLiveArea = this.address;
+        param.FClassArea = this.schoolIndex!=null?this.classAreas[this.schoolIndex].FENTRYID:'';
+        if(param.FNAME==='' && param.FNAMEEN===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '姓名不能为空', options: 1500 })
+        }
+        if(!this.dateOpts.date){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请选择出生日期', options: 1500 })
+        }
+        if(param.FFatherPhone==='' && param.FMotherPhone==='' && param.FPhone==='' ){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '手机号不能为空', options: 1500 })
+        }else{
+          let myLen,faLen,moLen,myNum,fatherNum,motherNum,countNum,countLen;
+          myLen = param.FPhone && param.FPhone.length>0?1:0;
+          faLen = param.FFatherPhone && param.FFatherPhone.length>0?1:0;
+          moLen = param.FMotherPhone && param.FMotherPhone.length>0?1:0;
+          myNum = util.vailPhone(param.FPhone)?1:0;
+          fatherNum = util.vailPhone(param.FFatherPhone)?1:0;
+          motherNum = util.vailPhone(param.FMotherPhone)?1:0;
+          countNum = myNum+fatherNum+motherNum;
+          countLen = myLen + moLen +faLen;
+          console.log(countNum,countLen)
+          if(countNum===0 || countNum<countLen){
+            return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的手机号', options: 1500 })
+          }
+        }
+        param.isCheck=this.switchChecked?1:0;
+        this.addUser(param);
+        delete param.FENTRYID;
+        console.log('提交',e,param)
+      },
+      reset(e){
+        console.log('重置',e)
+      },
+      vailTel(e){
+        let tel = e.detail.value;
+        let res = util.vailPhone(tel);
+        console.log('==r',e,res)
+      },
+      bindDateChange(e){
+        let val = e.detail.value;
+        this.dateOpts.date = val;
+        console.log(e)
+      },
+      schoolAddrChange(e){
+        let value = e.detail.value;
+        this.schoolIndex = Number(value);
+        console.log('e',e)
+      },
+      editAddress(e){
+        this.address=e.detail.value;
+      },
+      gelocation(){
+        wx.getSetting({
+          success: (res) => {
+            let authSetting = res.authSetting;
+            if (res.authSetting['scope.userLocation']) {
+                wx.chooseLocation({
+                  success:(cres)=> {
+                    this.address = cres.address;
+                  },
+                  fail:(err)=>{
+                    return this.$invoke('zanToptips', 'showZanTopTips', { content: '请打开设置页面授权地理位置', options: 2000 })
+                  }
+                })
+            }else{
+              if(res.authSetting['scope.userLocation']===false){
+                wx.openSetting({
+                  success(res){
+                    console.log('打开设置',res.authSetting)
+                  }
+                })
+              }else{
+                wx.chooseLocation({
+                  success:(cres)=> {
+                    this.address = cres.address;
+                  },
+                  fail:(err)=>{
+                    return this.$invoke('zanToptips', 'showZanTopTips', { content: '请打开设置页面授权地理位置', options: 2000 })
+                  }
+                })
+              }
+            }
+          }
+        })
+      },
+      switchChange(e){
+        this.switchChecked = e.detail.value;
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    async onLoad(options) {
+      this.FSTUDENTID=options.id?options.id:null
+      console.log('options',options)
+      await this.getAddr();
+      if(!options.id) return
+      await this.getStudentInfo(this.FSTUDENTID);
+    };
+
+    onShow() {
+      wx.getSetting({
+        success: (res) => {
+          let authSetting = res.authSetting;
+          if (authSetting && authSetting['scope.userLocation']) {
+            this.openSettingStatus = false;
+            this.$apply();
+          } else {
+            this.openSettingStatus = true;
+            this.$apply();
+          }
+        },
+        fail: (err) => {
+          console.log(err, 'err')
+        }
+      })
+    };
+    async addUser(param){
+      let res = await api.studentInfo({
+        query: {
+          method: 'SetStudentInfo',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        wepy.navigateBack({
+          delta: 1
+        });
+        tip.success('新增成功')
+        // if(param.isCheck===1){
+        //   wepy.setStorageSync('studentInfo',param);
+        // }
+        
+      }else{
+        return tip.toast({
+          title: res.msg || '新增用户信息异常',
+          icon: 'none'
+        })
+      }
+    }
+    async getAddr(){
+      let res = await api.studentInfo({
+        query: {
+          method: 'GetCustomerEnumInfo',
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        if(!res.data.classAreas || res.data.classAreas.length===0) return;
+        this.classAreas = res.data.classAreas;
+        this.$apply();
+        console.log(res.data.classAreas)
+      }else{
+        return tip.toast({
+          title: res.msg || '查询上课片区异常',
+          icon: 'none'
+        })
+      }
+    }
+    async getStudentInfo(id){
+      let res = await api.studentInfo({
+        query: {
+          method: 'LoadStudentDetail',
+          FSTUDENTID:id
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        this.studentInfo = res.data;
+        this.address = res.data.liveArea;
+        this.dateOpts.date = res.data.birthday;
+        if(res.data.sex==='2'){
+          this.sexArr[1].checked = true;
+        }else{
+          this.sexArr[0].checked = true;
+        }
+        if (this.classAreas.length>0){
+          this.classAreas.map((obj,i)=>{
+            if(res.data.classArea && res.data.classArea===obj.FENTRYID){
+              this.schoolIndex = i;
+            }
+          })
+        }
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询上课片区异常',
+          icon: 'none'
+        })
+      }
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+.information-container{
+  position: relative;
+  background-color: @bg-white;
+  border-top: 1px solid @bg-d;
+  .section{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 80rpx;
+    line-height: 80rpx;
+    padding: 0 26rpx;
+    border-bottom: 1px solid @bg-d;
+    position: relative;
+    .section-title{
+      width: 160rpx;
+    }
+    .icon-point{
+      color: @color-default;
+      margin-left: 10rpx;
+    }
+    picker,input{
+      text-align: right;
+      width: 558rpx;
+      i{
+        font-size: 24rpx;
+      }
+    }
+    .radio{
+      margin-left: 20rpx;
+    }
+  }
+  .switch-box{
+    .section-title{
+      width: 240rpx;
+    }
+    /*swtich整体大小及背景色*/
+    .wx-switch-input{
+      width: 80rpx !important;
+      height:40rpx !important;
+      background: @color-major !important;
+      border: @color-major !important;
+    }
+    .wx-switch-input::before{
+      width:80rpx !important;
+      height: 40rpx !important;
+    }
+    .wx-switch-input::after{
+      width: 40rpx !important;
+      height: 40rpx !important;
+    }
+  }
+  .btn-area{
+    margin-top: 30rpx;
+    padding: 0 26rpx;
+    .btn{
+      border-radius: 6rpx;
+    }
+    .btn-red{
+      background-color: @color-default;
+    }
+  }
+  .set-container {
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      // height: 200rpx;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      position: fixed;
+      display: flex;
+      justify-content: center; 
+      align-items: center;
+      .set-content{
+        background-color: @bg-white;
+        width:640rpx;
+        padding:26rpx;
+        .text{
+          margin-bottom: 26rpx;
+          color: @color-9;
+        }
+      }
+      .btn-red{
+        width: 100%;
+        color: @color-white;
+        background-color: @color-default;
+      }
+    }
+}
+</style>

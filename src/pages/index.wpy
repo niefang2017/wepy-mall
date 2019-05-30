@@ -1,0 +1,353 @@
+<!-- index 首页-->
+<template>
+  <view class='page-container' style="min-height:{{systemInfo.windowHeight}}px">
+    <view class="search-box">
+      <view class="search-content" @tap="goSearch">
+        <i class="iconfont icon-search"></i>
+        <text class="h6 placeholder">搜索</text>
+      </view>
+    </view>
+    <swiper class="swiper" indicator-active-color="{{swiperOpts.indicatorActiveColor}}" indicator-dots="{{swiperOpts.indicatorDots}}" autoplay="{{swiperOpts.autoplay}}" interval="{{swiperOpts.interval}}" duration="{{swiperOpts.duration}}" circular="true">
+      <block wx:for="{{adList}}" wx:key="key">
+        <swiper-item>
+          <image src="{{item.image}}" lazy-load="true" class="slide-image" @tap.stop="goToAdvert({{item.url}})" />
+        </swiper-item>
+      </block>
+    </swiper>
+    <view class="nav-list">
+      <view class="navigate" @tap="search('')">
+        <image src="{{images[0]}}" class="nav-icon"></image>
+        <view class="nav-text">体验课</view>
+      </view>
+      <view class="navigate" @tap="search('')">
+        <image src="{{images[1]}}" class="nav-icon"></image>
+        <view class="nav-text">课程专区</view>
+      </view>
+      <view class="navigate" @tap="search(热门活动)">
+        <image src="{{images[2]}}" class="nav-icon"></image>
+        <view class="nav-text">热门活动</view>
+      </view>
+      <view class="navigate" @tap="search(推荐课程)">
+        <image src="{{images[3]}}" class="nav-icon"></image>
+        <view class="nav-text">推荐课程</view>
+      </view>
+      <navigator class="navigate" url="/pages/course-list?type=2">
+        <image src="{{images[4]}}" class="nav-icon"></image>
+        <view class="nav-text">个人课程</view>
+      </navigator>
+      <view class="navigate">
+        <image src="{{images[5]}}" class="nav-icon"></image>
+        <view class="nav-text">在线客服</view>
+        <button open-type="contact" class="button" @tap="isCheckContact"></button>
+      </view>
+      <view class="navigate" @tap="goOtherPorgram(0)">
+        <image src="{{images[6]}}" class="nav-icon"></image>
+        <view class="nav-text">相关赛事</view>
+      </view>
+      <view class="navigate" @tap="goOtherPorgram(1)">
+        <image src="{{images[7]}}" class="nav-icon"></image>
+        <view class="nav-text">五星官网</view>
+      </view>
+    </view>
+    <view class="crumbs h4">推荐商品</view>
+    <discover :list.sync="discoverList"></discover>
+    <view class="h5 bottom-line" wx:if="{{showLine}}"><text class="dash"></text><text>我是有底线的</text><text class="dash"></text></view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api'
+  import tip from '@/utils/tip'
+  import Discover from '@/components/discover'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Index extends wepy.page {
+    config = {
+      navigationBarTitleText: '五星体育运动商城',
+    };
+    data = {
+      images: ['../static/images/nav1.png', '../static/images/nav2.png', '../static/images/nav3.png', '../static/images/nav4.png', '../static/images/nav5.png', '../static/images/msg.png', '../static/images/video.png', '../static/images/home.png'],
+      windowHeight: null,
+      swiperOpts: {
+        indicatorDots: true,
+        autoplay: true,
+        interval: 3000,
+        duration: 1000,
+        indicatorActiveColor: "#ffffff",
+      },
+      adList: [],
+      discoverList: [],
+      currentPage: 1,
+      contact:false,
+      pageNo:1,
+      pageSize:5,
+      totalPage:0,
+      showLine: false
+    };
+    components = {
+      discover: Discover
+    };
+    methods = {
+      goSearch() {
+        wepy.navigateTo({
+          url: '/pages/search'
+        });
+      },
+      goQrcode(){
+        wepy.navigateTo({
+          url: '/pages/qrcode'
+        });
+      },
+      search(e){
+        wepy.navigateTo({ url: `/pages/search?keyword=${e}&type=2` });
+      },
+      tapEvent(e) {
+        let store = getStore();
+        console.log('获取store= ', store.getState());
+      },
+      goToAdvert(e) {
+        console.log('url',e)
+        let url = `/pages/web-view?url=${e}`
+        wepy.navigateTo({
+          url: url
+        });
+      },
+      onShareAppMessage() {
+        return {
+          title: '五星体育运动商城',
+          path: '/pages/index',
+          success: res => {
+            console.log('res', res)
+          },
+          fail: () => {},
+          complete: () => {}
+        };
+      },
+      isCheckContact(){
+        let contact = this.contact;
+        if(!contact){
+          return tip.toast({
+            title: '微信版本太低，不支持客服功能',
+            icon: 'none'
+          })
+        }
+      },
+      goOtherPorgram(type){
+        const appIdArr = [{
+          appId:"wx38557d1eb9f54bec",
+          name:"联赛app"
+        },{
+          appId:"wx64520bbf28ce91ff",
+          name: "五星官网"
+        }];
+        wx.navigateToMiniProgram({
+        appId: appIdArr[type].appId,
+        envVersion: 'release',
+        success(res) {
+          // 打开成功
+          console.log('打开小程序',appIdArr[type].name)
+        }
+      })
+        // return tip.toast({
+        //   title: '跳转其他小程序功能提示',
+        //   icon: 'none'
+        // })
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {};
+    async onLoad() {
+      let systemInfo = this.$parent.globalData.systemInfo;
+      if (systemInfo) {
+        this.windowHeight = systemInfo.windowHeight;
+      }
+      if (wx.canIUse('button.open-type.contact')) {
+        this.contact = true
+      }
+      let userInfo = this.$parent.globalData.userInfo;
+      if (!userInfo) {
+        await this.$parent.getUserInfo()
+      }
+      this.$apply();
+      await this.getAdList();
+      await this.getDiscoverList({});
+    };
+    async onShow() {};
+    onReachBottom() {
+      let totalPage = this.totalPage;
+      let pageNo = this.pageNo;
+      if (totalPage > pageNo) {
+        this.pageNo++;
+        this.getDiscoverList({
+          pageNo: this.pageNo,
+          reach:true
+        })
+      } else {
+        this.showLine=true;
+      }
+    };
+    async getAdList() {
+      let res = await api.categoryList({
+        query:{
+          method:'GetCarousels'
+        },
+        realUrl: true
+      })
+      if (res.code === 0 && res.data.length >0) {
+        this.adList = res.data;
+        this.$apply();
+      }
+      // let res = await api.getAdList()
+      // if (res.code === 0 && res.data.length > 0) {
+      //   this.adList = res.data;
+      //   this.$apply();
+      // }
+    };
+    async getDiscoverList({pageNo=1, pageSize=5,reach=false}) {
+      let res = await api.courseHandle({
+        query:{
+          method:'GetRecommendProduct',
+          pageNo:pageNo?pageNo:this.pageNo,
+          pageSize:pageSize
+        },
+        realUrl: true
+      })
+      if (res.code === 0 && res.data) {
+        let data = res.data;
+        if (!data && data.list.length === 0) {
+          return tip.toast({
+            title: '没有查询到商品',
+            icon: 'none'
+          })
+        }
+        this.totalPage = Math.ceil(data.totle / pageSize);
+        this.discoverList = reach?[...this.discoverList, ...data.list]:data.list;
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: '没有查询到商品',
+          icon: 'none'
+        })
+      }
+      // let res = await api.getDiscover();
+      // if (res.code === 0 && res.data.length > 0) {
+      //   this.discoverList = res.data;
+      //   this.$apply();
+      // }
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .page-container {
+    .crumbs {
+      background-color: @bg-white;
+      padding: 20rpx 20rpx 0;
+    }
+    .navigator-hover{
+      // background-color:  transparent;
+    }
+    .navigate{
+      position: relative;
+      image{
+        background-color: transparent;
+      }
+    }
+    button {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      text-align: center;
+      line-height: 100%;
+      z-index: 1;
+    }
+  }
+  .search-box {
+    background-color: @bg-white;
+    padding: 0 20rpx 20rpx;
+    .search-content {
+      display: flex;
+      justify-content: center;
+      text-align: center;
+      align-items: center;
+      border-radius: 30rpx;
+      color: @color-3;
+      margin: 0 auto;
+      background: @bg-white;
+      padding: 5rpx 12rpx;
+      height: 38rpx;
+      z-index: 22;
+      border: 1px solid @color-3;
+      .iconfont {
+        font-size: 24rpx;
+      }
+      .iconfont,
+      .placeholder {
+        color: @color-3;
+        line-height: 36rpx;
+      }
+    }
+  }
+  .icon-search {
+    font-size: 32rpx;
+    margin-right: 10rpx;
+  }
+  .swiper {
+    height: 348rpx;
+  }
+  .slide-image {
+    width: 100%;
+    height: 100%;
+  }
+  .nav-list {
+    background-color: @bg-white;
+    display: flex;
+    font-size: 26rpx;
+    justify-content: space-between;
+    flex-flow: row wrap; 
+    padding: 20rpx 0;
+    color: @color-9;;
+    border-bottom: 1px solid @bg-d;
+    .navigate {
+      flex: 0 1 25%;
+      text-align: center;
+      margin: 20rpx auto;
+      .nav-icon {
+        height: 80rpx;
+        margin: 0 auto;
+        width: 80rpx;
+        margin-bottom: 14rpx;
+      }
+      .nav-text {
+        font-size: 26rpx
+      }
+    }
+  }
+    .bottom-line{
+      text-align: center;
+      color: @bg-d;
+      height: 120rpx;
+      line-height: 120rpx;
+      padding-bottom: 14rpx;
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text{
+        display: block;
+      }
+      .dash{
+        width: 120rpx;
+        height: 2rpx;
+        margin: 0 10rpx;
+        background-color: @bg-gray;
+      }
+    }
+</style>

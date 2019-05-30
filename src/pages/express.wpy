@@ -1,0 +1,261 @@
+<!-- express 快递进度 -->
+<template>
+  <view class='express-container' wx:if="{{stepsArr && stepsArr.length>0}}">
+    <repeat for="{{expressType}}" key="index" index="index" item="item">
+      <view class="header" wx:if="{{item.value===opts.com}}">
+        <image class="item" src="{{item.logo}}" mode="scaleToFill" lazy-load="false"></image>
+        <view class="item">
+          <view class="h3 bold">{{item.label}}</view>
+          <view class="h4" @tap="callTel({{item.tel}})">官方电话 {{item.tel}} <text class="iconfont icon-xiangyoujiantou"></text>
+          </view>
+        </view>
+      </view>
+    </repeat>
+    <view class="step-container">
+      <steps type="vertical" :steps.sync="stepsArr" :state.sync="currentState" className='my-class'></steps>
+    </view>
+  </view>
+  <view wx:if="{{showNo}}" class="no-order" @tap="refresh">
+    <i class= "iconfont icon-daifahuo"></i>
+    <view class="no-text h4">
+      暂无查询到物流信息
+    </view>
+    <view class="no-text h5">
+      点击刷新物流信息
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import steps from '@/components/common/steps';
+  const expressImgHost = 'https://cdn.kuaidi100.com/images/all/56/';
+  export default class Express extends wepy.page {
+    config = {
+      navigationBarTitleText: "物流详情",
+    };
+
+    data = {
+      expressType:[
+        {
+          label:'顺丰快递',
+          value:'shunfeng',
+          logo:`${expressImgHost}shunfeng.png`,
+          tel:'95338'
+        },
+        {
+          label:'申通快递',
+          value:'shentong',
+          logo:`${expressImgHost}shentong.png`,
+          tel:'95543'
+        },
+        {
+          label:'百世快递',
+          value:'huitongkuaidi',
+          logo:`${expressImgHost}huitongkuaidi.png`,
+          tel:'95320'
+        },
+        {
+          label:'圆通快递',
+          value:'yuantong',
+          logo:`${expressImgHost}yuantong.png`,
+          tel:'95554'
+        },
+        {
+          label:'中通快递',
+          value:'zhongtong',
+          logo:`${expressImgHost}zhongtong.png`,
+          tel:'95311'
+        },
+        {
+          label:'天天快递',
+          value:'tiantian',
+          logo:`${expressImgHost}tiantian.png`,
+          tel:'400-188-8888'
+        },
+        {
+          label:'韵达快递',
+          value:'yunda',
+          logo:`${expressImgHost}yunda.png`,
+          tel:'95546'
+        },
+        {
+          label:'ems快递',
+          value:'ems',
+          logo:`${expressImgHost}ems.png`,
+          tel:'11183'
+        },
+        {
+          label:'邮政快递',
+          value:'youzhengguonei',
+          logo:`${expressImgHost}youzhengguonei.png`,
+          tel:'11183'
+        }
+      ],
+      options:{
+        type:'',
+        postid:''
+      },
+      state:{
+        '0':'在途中',
+        '1':'已揽收',
+        '2':'疑难',
+        '3':'已签收',
+        '4':'退签',
+        '5':'同城派送中',
+        '6':'退回',
+        '7':'转单'
+      },
+      currentState:'',
+      opts:{
+        steps:[],
+        nu:'',
+        com:'',
+        status:'',
+        state:''
+      },
+      stepsArr: [],
+      showNo:false
+    };
+
+    components = {
+      steps:steps
+    };
+
+    methods = {
+      callTel(e){
+        wx.makePhoneCall({
+          phoneNumber: e
+        })
+      },
+      refresh(e){
+        let options = this.options;
+        this.getExpress(options);
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    async onLoad(e) { 
+      const {type,postid}=e;
+      if(type && postid){
+        this.options=e;
+        this.$apply();
+      }
+      await this.getExpress({type:type,postid:postid});
+    };
+
+    onShow() { };
+    async getExpress(param){
+      // tip.loading()
+      let res = await api.expressDetail({
+        query: {
+          ...param
+        },
+        kuaidi: true
+      })
+      if(res.status==='200'){
+        // tip.loaded()
+        console.log('res',res)
+        let stepsArr = res.data?res.data:[];
+        let opts = {
+          nu: res.nu,
+          com: res.com,
+          status: res.status,
+          state: res.state,
+        }
+        this.currentState = res.state?res.state:'';
+        this.stepsArr = this.fomatStepArr({data:stepsArr,state:res.state});
+        console.log('steps',opts,this.stepsArr)
+        this.opts = opts;
+        this.$apply();
+      }else{
+        // tip.loaded()
+        return tip.toast({
+          title: res.message || '查询信息异常',
+          icon: 'none'
+        })
+      }
+    }
+    fomatStepArr({data,state}){
+      let stepArr = [];
+      if(data.length>0){
+        if(data.length===1 && data[0].context==='查无结果'){
+          this.showNo=true;
+          return []
+        }
+        this.showNo=false;
+        data.map((obj,i)=>{
+          let tmp = {
+            done: i===0?true:false,
+            current: i===0?true:false,
+            text: obj.context,
+            desc: obj.ftime?obj.ftime:''
+          }
+          stepArr.push(tmp)
+  
+        })
+      }
+      return stepArr
+    }
+  }
+</script>
+
+<style lang='less'>
+.express-container{
+  position: relative;
+  padding: 26rpx;
+  .header{
+    padding: 26rpx;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 2rpx 20rpx rgba(0,0,0,0.08);
+    background-color: #fff;
+    image{
+      width: 56px;
+      height: 56px;
+      margin-right: 20rpx;
+      background-color: transparent;
+    }
+    .item{
+      view:last-child{
+        margin-top: 20rpx;
+      }
+    }
+    .bold{
+      font-weight: bold;
+    }
+    .iconfont{
+      font-size: 28rpx;
+    }
+  }
+  .step-container{
+    margin-top: 26rpx;
+    padding: 26rpx 26rpx 26rpx 40rpx;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2rpx 20rpx rgba(0,0,0,0.08);
+    background-color: #fff;
+    .my-class{
+      // color: red;
+    }
+  }
+}
+.no-order{
+  padding-top: 350rpx;
+  text-align: center;
+  color: #ddd;
+  i{
+    font-size: 120rpx;
+  }
+  .no-text{
+    margin-top: 20rpx;
+  }
+}
+</style>

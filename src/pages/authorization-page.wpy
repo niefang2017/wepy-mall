@@ -1,0 +1,51 @@
+<!-- authorization-page 授权页面 -->
+<template>
+  <view class="auth-container" style="min-height:{{systemInfo.windowHeight}}px">
+    <authorization></authorization>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import Authorization from '@/components/common/authorization';
+  export default class AuthorizationPage extends wepy.page {
+    config = {
+      navigationBarTitleText: "授权",
+    };
+
+    data = {
+      systemInfo:{}
+    };
+
+    components = {
+      authorization: Authorization
+    };
+
+    methods = {};
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    async onLoad() { 
+      let systemInfo = this.$parent.globalData.systemInfo;
+      if(!systemInfo){
+        systemInfo = await wepy.getSystemInfo();
+      }
+      this.systemInfo= systemInfo;
+      this.$apply();
+    };
+
+    onShow() { };
+  }
+</script>
+
+<style lang='less'>
+.auth-container{
+  display: flex;
+  justify-content: center;
+  // align-items: center;
+}
+</style>

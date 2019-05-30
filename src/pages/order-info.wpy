@@ -1,0 +1,512 @@
+<!-- order-info 订单详情 -->
+<template>
+  <view class='order-container'>
+    <view class="row" wx:if="{{opts.liveAddress}}">
+      <view class="addr-info">
+        <i class="iconfont icon-shouhuodizhi"></i>
+        <view class="item">
+          <view class="h4" wx:if="{{opts.receiver}}">{{opts.receiver}} {{opts.telPhone}}</view>
+          <view class="h4" >{{opts.liveAddress}}</view>
+        </view>
+      </view>
+    </view>
+    <view class="row">
+      <view class="h5 sub-title">订单状态<text class="status">{{status[opts.status]}}</text></view>
+      <view class="list" wx:if="{{opts.orderDetails.length>0}}">
+        <repeat for="{{opts.orderDetails}}" key="index" index="index" item="item">
+          <view class="item">
+            <view class="item-left">
+              <image src="{{item.pic}}" mode="aspectFit" lazy-load="true"></image>
+            </view>
+            <view class="h5 text">
+              <view>{{item.materialName}}</view>
+              <view class="tags" wx:if="{{item.auxprop}}">
+                <repeat for="{{item.auxprop}}" key="jIdx" index="jIdx" item="j">
+                  <text class="tag">{{jIdx>0?', ':''}}{{j}}</text>
+                </repeat>
+              </view>
+            </view>
+            <view class="goods-item">
+              <view class="price h3">
+                <text class="sup">￥</text>{{item.unitPrice}}
+              </view>
+              <view class="num h4">
+                x{{item.count}}
+              </view>
+            </view>
+          </view>
+        </repeat>
+      </view>
+    </view>
+    <view class="row footer">
+      <view class="order-price h4">
+        <view>订单金额：</view>
+        <view><text class="sup">￥</text>{{opts.totalAmount}}</view>
+      </view>
+      <view class="foot-info h3">
+        <i class="iconfont icon-xiangshangjiantou"></i>
+        <text>实付金额: </text>
+        <view class="h3 price">
+          <text class="sup">￥</text>{{opts.discountAmount}}
+        </view>
+      </view>
+    </view>
+    <view class="row h4 time">
+      <view class="item">
+        <view>下单日期</view>
+        <view>{{opts.createDate}}</view>
+      </view>
+      <view class="item">
+        <view>订单编号</view>
+        <view>{{opts.billNo}}</view>
+      </view>
+    </view>
+    <view class="btn-container">
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="0" wx:if="{{opts.status==='1'}}">取消订单</button>
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="1" wx:if="{{opts.status === '9'}}">申请退款</button>
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="2" wx:if="{{opts.status === '9' || opts.status === '8'}}">删除订单</button>
+      <button class="btn h4" @tap.stop="goExpress" data-id="{{opts.ExpressNumber}}" data-type="{{opts.ExpressCompany}}" wx:if="{{opts.ExpressNumber && (opts.status === '2' ||opts.status === '3' ||opts.status === '9')}}">查看物流</button>
+      <button class="btn h4" wx:if="{{opts.status === 9}}" @tap.stop="goRate({{opts}})">评价晒单</button>
+      <!-- <button class="btn h4" @tap.stop="goRate({{opts}})">评价晒单</button> -->
+      <button class="btn h4 btn-red" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="100" wx:if="{{opts.status==='1'}}">立即支付</button>
+      
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import OrderItem from '@/components/order-item';
+  import {
+    UPDATE_CARL_STATUS,
+    UPDATE_RATE_INFO,
+    UPDATE_RATE_ORDER_LIST
+  } from '@/store/types/index'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Comfireorder extends wepy.page {
+    config = {
+      navigationBarTitleText: "订单详情",
+    };
+    data = {
+      orderId: '',
+      list: [],
+      openSettingStatus: false,
+      countPrice: 0,
+      postage: 0,
+      orderStatus:3,
+      statusList:{
+        '-1':'已退货',
+        '0':'待付款',
+        '1':'待发货',
+        '2':'待收货',
+        '3':'已收货'
+      },
+      status: ['已删除','待付款', '待发货', '待收货', '退款中','已退款','退货中','已退货','已取消','已完成'],
+      actionArr:[{
+        text:'取消订单',
+        method:'CancelOrder'
+      },{
+        text:'申请退款',
+        method:'SubmitRejected'
+      },{
+        text:'删除订单',
+        method:'DeleteOrder'
+      }],
+      orderCode:'0001',
+      receivingTime:'0001',
+      opts:{}
+
+    };
+    components = {
+      orderitem: OrderItem
+    };
+    methods = {
+      goRate(order){
+        let store = getStore();
+        let rateOrderList = [];
+        let url = '';
+        let data = order.orderDetails;
+        if(data && data.length>0){
+          data.forEach(element => {
+            let opt = {
+              orderId: order.id,
+              productId: element.materialId,
+              sku: element.auxprop,
+              price: element.unitPrice,
+              count: element.count,
+              discountPrice: element.discountAmount,
+              pic: element.pic,
+            };
+            rateOrderList.push(opt);
+          });
+          if(rateOrderList.length>1){
+            store.dispatch({
+              type:UPDATE_RATE_ORDER_LIST,
+              rateOrderList:rateOrderList
+            })
+            url = `/pages/rate-list`
+          }else{
+            store.dispatch({
+              type:UPDATE_RATE_INFO,
+              rateInfo:rateOrderList[0]
+            })
+            url = `/pages/rate?type=1`
+          }
+          wepy.navigateTo({ url: url });
+        }else{
+          return tip.error('该订单商品信息异常')
+        }
+      },
+      goExpress(e){
+        const {id,type} = e.currentTarget.dataset;
+        let url = `/pages/express?type=${type?type:'huitongkuaidi'}&postid=${id?id:'71609701953604'}`
+        return wepy.navigateTo({ url: url });
+      },
+      btnEvent(e){
+        const {id,type} = e.currentTarget.dataset;
+        const actionArr = this.actionArr;
+        let param = {};
+        if(Number(type)===100){
+          // 支付
+          return this.payment({
+            orderId:id
+          })
+        }
+        if (Number(type)===2){
+          // 批量删除orderIds=1,2,3
+          param = {
+            method: actionArr[type].method,
+            orderIds: id
+          }
+        }else{
+          param = {
+            method: actionArr[type].method,
+            orderId: id
+          }
+        }
+        wx.showModal({
+          title: '提示',
+          content: `确定要${actionArr[type].text}吗？`,
+          showCancel: true,
+          confirmColor: '#ff6a3c',
+          success: res => {
+            if (res.confirm) {
+              console.log('你点击了确定')
+              this.handleAction(param,actionArr[type].text)
+            } else if (res.cancel) {
+              console.log('你点击了取消')
+            }
+          },
+          fail: res => {
+            console.log('modal失败',res)
+          }
+        });
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {
+      isExpress(){
+        let status= this.data.opts?this.data.opts.status:'';
+        let showExpressBtn = false;
+        if(status === '2' ||status === '3' ||status === '9'){
+          showExpressBtn= true
+        }
+        return showExpressBtn;
+      }
+    };
+    async onLoad(e) {
+      const {
+        id
+      } = e;
+      this.orderId = id;
+      this.$apply();
+      let unionid = this.$parent.globalData.unionid;
+      // if( unionid == ''){
+      //   getApp().loginCallback = res => {
+      //     this.getOrderInfo(orderId)
+      //   };
+      // }else{
+      //   this.getOrderInfo(orderId)
+      // }
+      await this.getOrderInfo(id)
+    };
+    onShow() {};
+    async getOrderInfo(orderId) {
+      let res = await api.getOrderList({
+        query: {
+          method:'GetOrderDetail',
+          orderId: orderId
+        },
+        realUrl: true
+      })
+      if (res.code === 0) {
+        this.opts = res.data;
+        // this.list = res.data
+        // let countPrice = 0;
+        // res.data.forEach(element => {
+        //   countPrice += element.price * element.num
+        // })
+        // this.countPrice = countPrice;
+        this.$apply();
+      } else {
+        tip.error(res.msg)
+      }
+    };
+    async handleAction(param,text){
+      let res = await api.getOrderList({
+        query: {
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        this.$emit('refresh-list')
+        return tip.toast({
+          title: res.msg || `${text}成功`,
+          icon: 'none'
+        })
+      }else{
+        return tip.toast({
+          title: res.msg || '订单操作异常',
+          icon: 'none'
+        })
+      }
+    };
+    async payment(param) {
+      let res = await api.getGoodsDetail({
+        query: {
+          method:'WeixinPay',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code ===0){
+        let data = res.data;
+        if(!data || !data.PaySign){
+          return tip.error('获取支付信息异常')
+        }
+        wx.requestPayment({
+          timeStamp: data.TimeStamp,
+          nonceStr: data.NonceStr,
+          package: data.Package,
+          signType: data.SignType,
+          paySign: data.PaySign,
+          success:(r)=> {
+            console.log('支付',r)
+            tip.success('支付成功')
+            let store = getStore();
+            store.dispatch({
+              type: UPDATE_CARL_STATUS,
+              cartIsUpDate: true
+            });
+          },
+          fail:(err)=> {
+            console.log('支付err',err)
+            // tip.error(res.msg)
+            }
+        })
+      }
+      else{
+        tip.error(res.msg)
+      }
+      
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .order-container {
+    position: relative;
+    .row {
+      margin-top: 20rpx;
+      background-color: @bg-white;
+      &.time{
+        padding: 26rpx;
+      }
+      >.item{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 26rpx;
+        color: @color-9;
+        &:last-child{
+          margin-bottom: 0;
+        }
+      }
+      >.sub-title {
+        padding: 0 26rpx;
+        height: 80rpx;
+        line-height: 80rpx;
+        border-bottom: 1px solid @bg-gray;
+        position: relative;
+        .status{
+          position: absolute;
+          right: 26rpx;
+          top: 0;
+          height: 80rpx;
+          line-height: 80rpx;
+          color: @color-major;
+        }
+      }
+      .list {
+        margin: 0 26rpx;
+        .item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-top: 1px solid @bg-gray;
+          padding: 26rpx 0;
+          &:first-child {
+            border-top: none;
+          }
+          .item-left {
+            width: 80rpx;
+            image {
+              width: 80rpx;
+              height: 80rpx;
+            }
+          }
+          .text {
+            // display: inline-block;
+            width: 480rpx;
+            padding-left: 26rpx;
+          }
+          .tags {
+            margin-top: 16rpx;
+            .tag {
+              margin-left: 10rpx;
+              color: @color-9;
+              &:first-child {
+                margin-left: 0;
+              }
+            }
+          }
+          .goods-item {
+            .price {
+              position: relative;
+              .sup {
+                font-size: 20rpx;
+                position: absolute;
+                top: -2rpx;
+                left: -16rpx;
+              }
+            }
+            .num {
+              text-align: right;
+              margin-top: 16rpx;
+            }
+          }
+        }
+      }
+      .addr-info {
+        display: flex;
+        padding: 26rpx;
+        i {
+          width: 60rpx;
+          line-height: 1.4;
+        }
+        .item {
+          view {
+            line-height: 1.4;
+          }
+        }
+      }
+      .nav {
+        padding: 26rpx;
+        border-bottom: 1px solid @bg-gray;
+        .price-info {
+          padding: 0;
+          border: none;
+        }
+      }
+      .price-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 26rpx 0;
+        border-bottom: 1px solid @bg-gray;
+        margin: 0 26rpx;
+        &:first-child {
+          margin: 0 auto;
+        }
+        &:last-child {
+          border: none;
+        }
+        .sub-title {
+          padding: 0;
+        }
+        .price {
+          color: @color-major;
+        }
+      }
+    }
+    .footer{
+      position: relative;
+      .icon-xiangshangjiantou{
+        color: @bg-gray;
+        width: 32rpx;
+        height: 32rpx;
+        font-size: 32rpx;
+        background-color: #fff;
+        position:absolute;
+        top: -22rpx;
+        right: 26rpx;
+      }
+      .order-price{
+        padding: 26rpx;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: @color-9;
+        view{
+          position: relative;
+          .sup{
+            font-size: 20rpx;
+            position:absolute;
+            top: -4rpx;
+            left: -16rpx;
+          }
+        }
+      }
+      .foot-info{
+        margin-top: 20rpx;
+        padding: 26rpx;
+        border-top: 1px solid @bg-gray;
+        position: relative;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: @color-major;
+        .price{
+          position: relative;
+          margin-left: 46rpx;
+          .sup{
+            font-size: 20rpx;
+            position:absolute;
+            top: -4rpx;
+            left: -16rpx;
+          }
+        }
+      }
+    }
+    .btn-container{
+      margin-top: 20rpx;
+      text-align: right;
+      padding-right: 26rpx;
+      .btn{
+        height: 72rpx;
+        line-height: 72rpx;
+        display: inline-block;
+        color: @color-9;
+        border-radius: 6rpx;
+        margin-left: 20rpx;
+      }
+    }
+  }
+</style>

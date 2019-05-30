@@ -1,0 +1,83 @@
+<!-- pay-result 支付成功 -->
+<template>
+  <view class='result-container'>
+    <icon type="{{type[openStatus]}}" size="{{size}}" color="{{color[openStatus]}}" />
+    <view class="title">{{title[openStatus]}}</view>
+    <view class="btn-container">
+      <view class="desc h5" wx:if="{{text}}">{{text}}</view>
+      <button class="btn btn-red" @tap="handleTap('order')">订单列表</button>
+      <button class="btn" @tap="handleTap('home')">返回首页</button>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class PayResult extends wepy.page {
+    config = {
+      navigationBarTitleText: "支付成功",
+    };
+
+    data = {
+      size:'70',
+      color: ['#999','#FF6200'],
+      type: ['clear','success'],
+      title:['支付失败','支付成功'],
+      text:'',
+      openStatus:0
+    };
+
+    components = {};
+
+    methods = {
+      handleTap(e){
+        let url =''
+        if(e==='order'){
+          url = `/pages/order-list`
+          wepy.redirectTo({ url: url });
+        }else{
+          url = `/pages/index`
+          wepy.switchTab({ url: url });
+        }
+        
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    onLoad(options) {
+      const {type,text} = options;
+      this.text = text?text:'';
+      this.openStatus = Number(type);
+    };
+  }
+</script>
+
+<style lang='less'>
+page{
+  background-color: #fff;
+}
+.result-container{
+  text-align: center;
+  position: relative;
+  padding: 80rpx 40rpx;
+  .title{
+    margin-top: 40rpx;
+    font-size: 40rpx;
+  }
+  .desc{
+    color: #999;
+    margin-bottom: 20rpx;
+  }
+  .btn-container{
+    margin-top: 60rpx;
+    .btn{
+      margin-top: 30rpx;
+    }
+  }
+}
+</style>

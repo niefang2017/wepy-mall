@@ -1,0 +1,52 @@
+<!-- qrcode 二维码 -->
+<template>
+  <canvas style="width: 240px; height: 240px;" canvas-id="myQrcode"></canvas>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import drawQrcode from 'weapp-qrcode'
+  export default class Qrcode extends wepy.component {
+    props = {};
+
+    data = {};
+
+    components = {};
+
+    methods = {};
+
+    events = {
+      'show-qrcode':(...args)=>{
+        let param = args[0];
+        this.canvasInit(param);
+      }
+    };
+
+    watch = {};
+
+    computed = {};
+
+    onLoad() { };
+
+    onShow() { };
+    canvasInit(data){
+      drawQrcode({
+        width: 240,
+        height: 240,
+        canvasId: 'myQrcode',
+        text: data.unionid,
+        image: {
+          imageResource: data.avatarUrl,
+          dx: 90,
+          dy: 90,
+          dWidth: 60,
+          dHeight: 60
+        }
+      })
+      
+    }
+  }
+</script>
+
+<style lang='less'>
+</style>

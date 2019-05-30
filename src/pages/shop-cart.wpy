@@ -1,0 +1,270 @@
+<!-- shop-cart 购物车 -->
+<template>
+  <view class='cart-container'>
+    <scroll-view scroll-y scroll-with-animation  wx:if="{{list.length>0}}">
+      <cartList :list.sync="list"></cartList>
+    </scroll-view>
+    <view class="jiesuan-box" wx:if="{{list.length>0}}">
+      <view class="left-price">
+        <view @tap.stop="selectAll" class="all-select-box">
+          <icon type="success" size="20" color="{{allChecked?'red':'rgb(153,153,153)'}}" />
+          <view class="all-select">全选</view>
+        </view>
+        <view class="total">合计：¥ {{totalPrice}}</view>
+      </view>
+      <view class="to-pay-btn {{noSelect?'no-select':''}}" @tap="toPayOrder">去结算</view>
+    </view>
+    <view wx:if="{{emptyStatus}}" class="empty-cart">
+      <image src="{{images[0]}}" mode="aspectFit" lazy-load="false"></image>
+      <view class="h2">购物车还是空的</view>
+      <button @tap="goHome" class="btn btn-red">到商城逛逛</button>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import CartList from "@/components/cart-list";
+  import {
+    UPDATE_CARL_STATUS
+  } from '@/store/types/goods'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Shopcart extends wepy.page {
+    config = {
+      navigationBarTitleText: '购物车',
+      enablePullDownRefresh:true,
+      backgroundTextStyle:'dark'
+    };
+
+    data = {
+      list:[],
+      loadStatus:false,
+      totalPrice: 0,
+      operating: false,
+      noSelect: true,
+      allChecked: true,
+      images:['../static/images/empty.png'],
+      emptyStatus:false
+    };
+
+    components = {
+      cartList: CartList
+    };
+
+    methods = {
+      selectAll(){
+        this.$broadcast('all-check')
+      },
+      goHome(){
+        wepy.switchTab({ url: '/pages/classify' });
+      },
+      toPayOrder(){
+        this.$broadcast('to-pay')
+      }
+    };
+
+    events = {
+      'change-list':(...args)=>{
+        let list = args[0];
+        this.changeList(list);
+      },
+      'change-total-price':(...args)=>{
+        let totalPrice = args[0];
+        this.totalPrice = totalPrice;
+        this.$apply();
+      },
+      'change-check':(...args)=>{
+        let allChecked = args[0];
+        this.allChecked = allChecked;
+        this.$apply();
+        }
+    };
+
+    watch = {
+    };
+
+    computed = {};
+
+    async onLoad() { 
+      this.loadStatus = true;
+      let userInfo = this.$parent.globalData.userInfo;
+      if (!userInfo) {
+        await this.$parent.getUserInfo()
+      }
+      await this.getCartList()
+    };
+    async onShow(){
+      let store = getStore();
+      let cartIsUpDate = store.getState().goods.cartIsUpDate;
+      console.log('cartIsUpDate',cartIsUpDate,store.getState().goods)
+      if(cartIsUpDate){
+        await this.getCartList();
+        store.dispatch({
+          type: UPDATE_CARL_STATUS,
+          cartIsUpDate: false
+        });
+      }
+    };
+    async getCartList(refresh){
+      let res = await api.buyCarServer({
+        query: {
+          method:'LoadData',
+        },
+        realUrl: true
+      })
+      if(res.code ===0){
+        // this.myCartList = res.data; 
+        if(refresh){
+          wx.stopPullDownRefresh();
+        }
+        let data = res.data;
+        if (data.length===0){
+          this.emptyStatus = true;
+        }
+        this.totalPrice = data.totalPrice?data.totalPrice:0;
+        for (let i = 0; i < data.length; i++) {
+          data[i].FCOUNT = Number(data[i].FCOUNT)
+          if (!data[i].isChecked) {
+            this.allChecked = false;
+            // break;
+          }
+        }
+        
+        this.list=data;
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询购物车异常',
+          icon: 'none'
+        })
+      }
+      // let res = await api.getCartList({
+      //   query:{
+      //    openId: 'openId' 
+      //   }
+      // });
+      // if(res.code === 0 && res.data){
+      //   let data = res.data;
+      //   this.list=data.list;
+      //   this.totalPrice = data.totalPrice;
+      //   for (let i = 0; i < this.list.length; i++) {
+      //     if (!this.list[i].isChecked) {
+      //       this.allChecked = false;
+      //       break;
+      //     }
+      //   }
+      // }
+      // this.$apply();
+      
+    };
+    onPullDownRefresh(){
+      this.getCartList('refresh')
+    };
+    changeList(list){
+      this.list = list;
+      let num = 0
+      let countPrice=0;
+      list.forEach(element => {
+        if(element.isChecked){
+          countPrice+=element.FPRICE*Number(element.FCOUNT)
+          num++
+        }
+      });
+      this.totalPrice = countPrice;
+      if(num>=1){
+        this.noSelect = false;
+      }else{
+        this.noSelect = true;
+      }
+      switch (num) {
+        case list.length:
+          this.allChecked = true;
+          break;
+        default:
+          this.allChecked = false;
+          break;
+      }
+      if(list.length===0){
+        this.allChecked = false;
+        this.emptyStatus = true;
+      }else{
+        this.emptyStatus = false;
+      }
+      this.$apply();
+    }
+  }
+</script>
+
+<style lang='less'>
+.cart-container{
+  position: relative;
+  padding-bottom: 100rpx;
+  .jiesuan-box {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    height: 100rpx;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    border-top: 1px solid #eee;
+    background-color: #fff;
+    z-index: 9999;
+    .to-pay-btn {
+      width: 240rpx;
+      text-align: center;
+      line-height: 100rpx;
+      background-color: #e64340;
+      font-size: 32rpx;
+      color: #ffffff;
+      &.no-select {
+      background-color: #ccc;
+      }
+    }
+    .left-price {
+      display: flex;
+      width: 510rpx;
+      justify-content: space-between;
+      padding: 0 30rpx 0 20rpx;
+      font-size: 28rpx;
+      box-sizing: border-box;
+      align-items: center;
+    }
+    .total {
+      color: #e64340;
+    }
+  }
+  .all-select-box {
+    width: 200rpx;
+    height: 100%;
+    display: flex;
+    align-items: center;
+  }
+  .all-select {
+    flex: 1;
+    padding-left: 10rpx;
+  }
+  
+  .empty-cart{
+    text-align: center;
+    padding: 80rpx 60rpx;
+    margin: 40rpx auto 0; 
+    image{
+      width: 200rpx;
+      height: 200rpx;
+      margin-bottom: 40rpx;
+    }
+    view{
+      margin-bottom: 40rpx;
+    }
+    .btn{
+      border-radius: 6rpx;
+
+    }
+  }
+}
+</style>

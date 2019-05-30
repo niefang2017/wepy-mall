@@ -1,0 +1,49 @@
+<!-- coupon-list 优惠券组件 -->
+<template>
+  <view class='coupon-row'>
+    <radio-group class="radio-group" bindchange="choose">
+      <label class="radio" wx:for="{{list}}" data-info="{{index}}">
+        <text>{{item.name}}</text>
+        <radio value="{{item.id}}" checked="{{item.checked}}" />
+      </label>
+    </radio-group>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Couponlist extends wepy.component {
+    props = {
+      list:[],
+      index:0
+    };
+
+    data = {};
+
+    components = {};
+
+    methods = {
+      choose(e){
+        console.log('eee',e)
+      },
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+  }
+</script>
+
+<style lang='less'>
+.coupon-row{
+  label{
+    padding: 26rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    
+  }
+}
+</style>

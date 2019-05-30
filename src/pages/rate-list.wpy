@@ -1,0 +1,106 @@
+<!-- rate-list 评价列表 -->
+<template>
+  <view class="goods-container">
+    <repeat for="{{rateOrderList}}" key="index" index="index" item="item">
+      <view class="goods-row h4">
+        <view class="goods-item">
+          <image class="logo" mode="aspectFit" src="{{item.pic}}" lazy-load="true"></image>
+        </view>
+        <view class="goods-item">
+          <view>{{item.product}}</view>
+          <view class="tags" wx:if="{{item.sku}}">
+            <repeat for="{{item.sku}}" key="jIdx" index="jIdx" item="j">
+              <text class="tag">{{jIdx>0?', ':''}}{{j}}</text>
+            </repeat>
+          </view>
+        </view>
+        <view class="goods-item" @tap="goRate({{item}})">
+          <text class="go-rate">去评价</text>
+          <text class="iconfont icon-xiangyoujiantou"></text>
+        </view>
+      </view>
+    </repeat>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import {
+    UPDATE_RATE_ORDER_LIST,
+    UPDATE_RATE_INFO
+  } from '@/store/types/index'
+  import {
+    getStore,
+    connect
+  } from 'wepy-redux';
+  @connect({
+    rateOrderList(state) {
+      console.log('rateOrderList=', state.rate.rateOrderList)
+      return state.rate.rateOrderList
+    }
+  })
+  export default class RateList extends wepy.page {
+    config = {
+      navigationBarTitleText: "评价晒单",
+    };
+    data = {};
+    components = {};
+    methods = {
+      goRate(data){
+        let store = getStore();
+        store.dispatch({
+          type:UPDATE_RATE_INFO,
+          rateInfo:data
+        })
+        const url = `/pages/rate?type=0`;
+        wepy.navigateTo({ url: url });
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {};
+    onLoad() {};
+    onShow() {};
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .goods-container {
+    padding: 0 26rpx;
+    background-color: @bg-white;
+    .goods-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 26rpx;
+      padding-top: 26rpx;
+      border-top: 1px solid @bg-gray;
+      &:first-child {
+        border: none;
+      }
+      .goods-item {
+        &:nth-child(2) {
+          flex: 0 1 420rpx;
+        }
+        .logo {
+          width: 120rpx;
+          height: 80rpx;
+        }
+        .tags {
+          margin-top: 16rpx;
+          .tag {
+            margin-left: 10rpx;
+            color: @color-9;
+            &:first-child {
+              margin-left: 0;
+            }
+          }
+        }
+        .go-rate{
+          color: @color-major;
+        }
+      }
+    }
+  }
+</style>

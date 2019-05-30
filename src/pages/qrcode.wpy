@@ -1,0 +1,96 @@
+<!-- qrcode 我的二维码 -->
+<template>
+  <view class='qr-container'>
+    <view class="header">
+      <view class="img-box">
+        <image class="head-img" src="{{userInfo.avatarUrl}}" lazy-load="false"></image>
+      </view>
+      <view class="h4 name">{{userInfo.nickName}}</view>
+    </view>
+    <view class="qrcode-canvas">
+      <qrcode></qrcode>
+    </view>
+    <view class="h3">向老师出示该二维码，快速签到</view>
+    <view class="h5 tips">本二维码仅用于快速签到，为防信息泄露，请勿发送给别人。</view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import Qrcode from '@/components/common/qrcode';
+  export default class Qrcodepage extends wepy.page {
+    config = {
+      navigationBarTitleText: "我的账号二维码",
+    };
+
+    data = {
+      userInfo:''
+    };
+
+    components = {
+      qrcode:Qrcode
+    };
+
+    methods = {};
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    onLoad() { 
+      this.userInfo = this.$parent.globalData.userInfo;
+      let param={
+        unionid: this.$parent.globalData.unionid,
+        avatarUrl: this.userInfo.avatarUrl
+      }
+      console.log('param',param)
+      this.$broadcast('show-qrcode',param)
+    };
+
+    onShow() { };
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+.qr-container{
+  position: relative;
+  margin: 160rpx auto 0;
+  padding: 40rpx 40px;
+  width: 240px;
+  background-color: @bg-white;
+  .header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    color: @color-9;
+    margin: 0 auto;
+    position: relative;
+    .img-box {
+      width: 100rpx;
+      height: 100rpx;
+      .head-img {
+        border-radius: 50%;
+        width: 100rpx;
+        height: 100rpx;
+        margin: 0 auto;
+      }
+    }
+    .name {
+      padding-left: 20rpx;
+    }
+  }
+  .qrcode-canvas{
+    width: 240px;
+    height: 240px;
+    margin: 40rpx auto;
+  }
+  .tips{
+    margin-top: 20rpx;
+    color: @bg-d;
+    line-height: 1.4;
+  }
+}
+</style>

@@ -1,0 +1,38 @@
+<!-- web-view -->
+<template>
+  <web-view src="{{url}}" @message="message">
+  
+  </web-view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Webview extends wepy.page {
+    config = {
+      navigationBarTitleText: "五星体育运动商城",
+    };
+
+    data = {
+      url:null
+    };
+
+    components = {};
+
+    methods = {};
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    onLoad(e) { 
+      this.url = e.url?e.url:null
+    };
+
+    onShow() { };
+  }
+</script>
+
+<style lang='less'>
+</style>

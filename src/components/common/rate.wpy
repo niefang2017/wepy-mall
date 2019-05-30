@@ -1,0 +1,76 @@
+<!-- rate 评分组件 -->
+<template>
+  <view class='rate-row rate-{{value}}'>
+    <repeat for="{{list}}" key="index" index="index" item="item">
+      <text wx:if="{{istap}}" class="iconfont icon-star {{value>=item?'active':''}}" @tap.stop="handleRateTap({{item}})"></text>
+      <text wx:else class="iconfont icon-star {{value>=item?'active':''}}" ></text>
+    </repeat>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Rate extends wepy.component {
+    props = {
+      value: {
+        type: Number,
+        default: 0
+      },
+      istap:{
+        type:Boolean,
+        default:false
+      }
+    };
+
+    data = {
+      list:[1,2,3,4,5]
+    };
+
+    components = {};
+
+    methods = {
+      handleRateTap(item) {
+        // this.value =item
+        this.$emit('chooseRate', item)
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+    onLoad() {
+    };
+  }
+</script>
+
+<style lang='less'>
+.rate-row{
+  margin-left: 20rpx;
+  height: 80rpx;
+  line-height: 80rpx;
+  .iconfont{
+    font-size: 50rpx;
+    color: #e5e5e5;
+    margin-left: 16rpx;
+    &:first-child{
+      margin-left: 0;
+    }
+    &.active{
+      color: #FEC324;
+    }
+  }
+  // .item-icon{
+  //   &:before{
+  //     content: "\e643";
+  //   }
+  //   &.active{
+  //     &:before{
+  //     content: "\e684";
+  //     }
+  //   }
+  // }
+  
+}
+</style>

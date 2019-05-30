@@ -1,0 +1,51 @@
+@import "./color";
+@import "./icon";
+
+page {
+  background: @bg-primary;
+  color: @color-normal;
+}
+
+.fontsize (@size) {
+  line-height: @size;
+  font-size: @size;
+}
+image{
+  background-color:  @bg-primary;
+}
+.container {
+  position: relative;
+  background: @color-white;
+}
+.btn-red{
+  color: #fff !important;
+  background-color: @color-major;
+}
+.disabled{
+  opacity: 0.5;
+}
+button.btn-red[disabled]:not([type]) {
+  opacity: 0.5;
+  color: #fff;
+  background-color: @color-major;
+}
+  
+// 默认字体大小
+.h1 {
+  .fontsize(40rpx);
+}
+.h2 {
+  .fontsize(36rpx);
+}
+.h3 {
+  .fontsize(32rpx);
+}
+.h4 {
+  .fontsize(28rpx);
+}
+.h5 {
+  .fontsize(24rpx);
+}
+.h6 {
+  .fontsize(20rpx);
+}

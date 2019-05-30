@@ -1,0 +1,121 @@
+<!-- steps 步骤条 -->
+<template>
+  <view class="steps-row steps-{{type === 'vertical' ? 'vsteps' : 'steps'}} {{ className }}">
+    <repeat for="{{steps}}" key="index" index="index" item="item">
+      <view class="item {{item.current?'active':''}}">
+        <view class="icon {{item.done?'iconfont':''}} icon-{{state}}"></view>
+        <view class="title">{{item.text}}</view>
+        <view wx:if="{{item.desc}}" class="desc">{{item.desc}}</view>
+      </view>
+    </repeat>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Steps extends wepy.component {
+    props = {
+      steps: Object,
+      type: String,
+      hasDesc: {
+        type: Boolean,
+        default: false
+      },
+      state:{
+        type: String,
+        default: ''
+      },
+      className: {
+        type: String,
+        default: ''
+      }
+    };
+
+    data = {
+      stateOpt:{
+        '0':'在途中',
+        '1':'已揽收',
+        '2':'疑难',
+        '3':'已签收',
+        '4':'退签',
+        '5':'同城派送中',
+        '6':'退回',
+        '7':'转单'
+      },
+    };
+  }
+</script>
+
+<style lang='less'>
+.steps-row{
+  position: relative;
+  line-height: 1;
+  &:before{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 8rpx;
+    width: 1px;
+    height: 100%;
+    background-color: #f5f5f5;
+    z-index: 1;
+  }
+  &.steps-vsteps{
+    display: block;
+  }
+  .item{
+    position: relative;
+    color: #ddd;
+    font-size: 28rpx;
+    margin-top: 20rpx;
+    &:first-child{
+      margin-top: 0;
+    }
+    .icon{
+      width: 16rpx;
+      height: 16rpx;
+      border-radius: 50%;
+      position: absolute;
+      background-color: #f5f5f5;
+      z-index: 1;      
+    }
+    &.active{
+      color: #000;
+      font-weight: bold;
+      .icon{
+        background-color: #F3514F;
+      }
+      .iconfont{
+        width: 60rpx;
+        height: 60rpx;
+        line-height: 60rpx;
+        font-size: 40rpx;
+        text-align: center;
+        left: -22rpx;
+        background-color: #F3514F;
+        color: #fff;
+        &:before{
+          content: "\e789";
+        }
+      }
+      .icon-3{
+        width: 48rpx;
+        height: 48rpx;
+        line-height: 48rpx;
+        font-size: 32rpx;
+        left: -16rpx;
+        &:before{
+          content: "\e664";
+        }
+      }
+    }
+    .title,.desc{
+      padding-left: 50rpx;
+      line-height: 1.4;
+    }
+    .desc{
+      margin-top: 10rpx;
+    }
+  }
+}
+</style>

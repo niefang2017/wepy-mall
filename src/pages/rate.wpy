@@ -1,0 +1,241 @@
+<!-- rate 评分page -->
+<template>
+  <view class='rate-container'>
+    <form report-submit="true" @submit="submit">
+      <view class="session">
+        <view class="item">
+          <image src="{{rateInfo.pic}}" mode="scaleToFill" lazy-load="false">
+          </image>
+        </view>
+        <view class="item">
+          <rate :value.sync="rateValue" :istap="istap" @chooseRate.user="handleRate"></rate>
+        </view>
+        <view class="item" wx:if="{{evaluateId}}">
+          <text class="h4 del" @tap.stop="handleDelRate({{evaluateId}})">删除评价</text>
+        </view>
+      </view>
+      <view class="text-area h4">
+        <textarea name="remarks" value="{{remarks}}"  placeholder="{{placeholder}}" />
+      </view>
+      <button class="btn btn-red" form-type="submit" disabled="{{disabled}}">
+        提交
+      </button>
+    </form>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import rate from '@/components/common/rate';
+  import {
+    UPDATE_RATE_INFO
+  } from '@/store/types/index'
+  import {
+    getStore,
+    connect
+  } from 'wepy-redux';
+  @connect({
+    rateInfo(state) {
+      console.log('rateInfo=', state.rate.rateInfo)
+      return state.rate.rateInfo
+    }
+  })
+  export default class RatePage extends wepy.page {
+    config = {
+      navigationBarTitleText: "评价晒单",
+    };
+    data = {
+      rateValue: 0,
+      istap:true,
+      remarks:'',
+      evaluateId:null,
+      route:'/pages/order-list',
+      placeholderList:['是什么让你这么失望啦？吐槽给我吧！','有什么好的建议可以帮助我们改进的吗？','在哪些方面改进，会让你更满意呢？','还不错吧？吐槽和建议都可以分享给其他同学哦！','说说你的使用心得！分享给想买的他们吧！']
+    };
+    components = {
+      rate: rate
+    };
+    methods = {
+      handleRate(value) {
+        this.rateValue = value;
+        this.$apply();
+        console.log('操作评分', value)
+      },
+      submit(e){
+        const {remarks} = e.detail.value;
+        let store = getStore();
+        const {productId,orderId} = store.getState().rate.rateInfo;
+        // let param = Object.assign({},{method:'EvaluateProduct',remarks:remarks},{evaluateGrade:this.rateValue},{materialId:productId,orderId:orderId});
+        let param = this.evaluateId?{method:'ModifyEvaluates',evaluateId:this.evaluateId,remarks:remarks,evaluateGrade:this.rateValue}:{method:'EvaluateProduct',remarks:remarks,evaluateGrade:this.rateValue,materialId:productId,orderId:orderId};
+        if(!remarks || remarks.length<10){
+          const opt={
+            title: '提示',
+            content: '很多优秀的评价都是10个字以上的，真的不多写点就提交了吗？',
+            showCancel: true,
+            confirmColor: '#999999',
+            confirmText: '提交',
+            cancelText: '再想想',
+            cancelColor: '#ff6a3c'
+          }
+          wx.showModal({
+            ...opt,
+            success: res => {
+              if (res.confirm) {
+                console.log('提交评价',param)
+                this.rateApi(param)
+              } else if (res.cancel) {
+                console.log('取消评价')
+              }
+            },
+            fail: res => {
+              this.rateApi(param)
+            }
+          });
+        }else{
+          this.rateApi(param)
+        }
+      },
+      handleDelRate(value){
+
+        this.delRate({evaluateId:value})
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {
+      placeholder(){
+        const rateValue = this.rateValue;
+        const placeholderList = this.placeholderList;
+        const placeholder = rateValue>0?placeholderList[rateValue-1]:placeholderList[4];
+        return placeholder;
+      },
+      disabled(){
+        return this.rateValue===0;
+      }
+    };
+    async onLoad(options) {
+      const store= await getStore();
+      const {productId,orderId} = store.getState().rate.rateInfo;
+      if(options.type && Number(options.type)===1){
+        this.route=`/pages/order-info?id=${orderId}`;
+      }
+      console.log('orderId,productId-',orderId,productId)
+      if(orderId && productId){
+        await this.getRateInfo({orderId:orderId,materialId:productId});
+      }
+      this.$apply()
+
+    };
+    onShow() {};
+    async rateApi(param){
+      let url = this.route;
+      let res = await api.courseHandle({
+        query: {
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        return tip.toast({
+          title: res.msg || '评价成功',
+          icon: 'none',
+          onHide: ()=>{
+            wepy.redirectTo({ url: url });
+          }
+        })
+      }else{
+        return tip.toast({
+          title: res.msg || '评价异常',
+          icon: 'none'
+        })
+      }
+    };
+
+    async getRateInfo(param){
+      let res = await api.courseHandle({
+        query: {
+          method:'GetEvaluatesByOrder',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        if(!res.data || res.data.length===0) return
+        let data = res.data[0];
+        this.rateValue = data.evaluategrade?Number(data.evaluategrade):0;
+        this.remarks = data.remark?data.remark:'';
+        this.evaluateId = data.id?data.id:null;
+        this.$apply();
+      }else{
+        console.log( res.msg || '查询评价信息异常');
+      }
+    };
+
+    async delRate(param){
+      let url = this.route;
+      let res = await api.courseHandle({
+        query: {
+          method:'DeleteEvaluates',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        return tip.toast({
+          title: res.msg || '删除成功',
+          icon: 'none',
+          onHide: ()=>{
+            wepy.redirectTo({ url: url });
+          }
+        })
+        
+      }else{
+        return tip.toast({
+          title: res.msg || '删除异常',
+          icon: 'none'
+        })
+      }
+    };
+
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .rate-container {
+    .session {
+      padding: 40rpx;
+      display: flex;
+      align-content: center;
+      background-color: @bg-white;
+      position: relative;
+      .item {
+        image {
+          width: 120rpx;
+          height: 80rpx;
+        }
+        .del{
+          line-height: 80rpx;
+          color: @color-muted;
+          position:absolute;
+          right:40rpx;
+          top:40rpx;
+        }
+      }
+    }
+    .text-area{
+      textarea{
+        width: auto;
+        padding: 40rpx;
+        height: 210rpx;
+        line-height: 36rpx;
+        background-color: @bg-gray;
+      }
+    }
+    .btn{
+      margin: 40rpx 26rpx;
+    }
+  }
+</style>

@@ -1,0 +1,144 @@
+<!-- course-list 我的课程 -->
+<template>
+  <view class='course-list-container h4'>
+    <block wx:if="{{noData!=-1}}">
+      <view class="nav" wx:if="{{studentList.length>0}}" >
+        <repeat for="{{studentList}}" key="index" index="index" item="item">
+          <view @tap.stop="changeNav({{index}})" class="item {{index === selectIndex ? 'active':''}}"><text>{{item.name}}</text></view>
+        </repeat>
+      </view>
+      <view class="order-row" wx:if="{{currentCourseList.length>0}}" >
+        <repeat for="{{currentCourseList}}" key="index" index="index" item="item">
+          <courseitem :course.sync="item" :studentId.sync="studentId"></courseitem>
+        </repeat>
+      </view>
+    </block>
+    <view wx:if="{{noData===-1}}" class="no-order">
+      <i class="iconfont icon-kecheng"></i>
+      <view class="no-text">
+        您还没有购买课程
+      </view>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import CourseItem from '@/components/course-item';
+  export default class CourseList extends wepy.page {
+    config = {
+      navigationBarTitleText: "我的课程",
+    };
+
+    data = {
+      courseList:[],
+      studentList:[],
+      selectIndex:0,
+      studentId:'',
+      currentCourseList:[],
+      noData:0
+    };
+
+    components = {
+      courseitem: CourseItem
+    };
+
+    methods = {
+      changeNav(e){
+        this.selectIndex = e;
+        this.studentId = this.studentList[e].studentId;
+        this.currentCourseList = this.courseList[e];
+        // const id = this.studentList[e].id;
+        // this.getOrderList(id);
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {
+    };
+
+    async onLoad(e) {
+      await this.getCourseList();
+    };
+
+    onShow() { };
+    async getCourseList(id){
+      let studentList = [];
+      let courseList = [];
+      let res = await api.getOrderList({
+        query:{
+          method: 'GetMyClasses',
+        },
+        method: 'GET',
+        realUrl: true
+      })
+      if(res.code===0){
+        if (!res.data || res.data.length===0){
+          this.noData=-1
+          this.$apply();
+          return 
+        }
+        res.data.map((obj,idx)=>{
+          if(obj){
+            studentList[idx]={name:obj.name,studentId:obj.studentId};
+            courseList[idx]=obj.detail;
+          }
+        })
+        this.studentList = studentList
+        this.courseList = courseList;
+        this.studentId = studentList[0].studentId;
+        this.currentCourseList = courseList[0];
+        console.log('studentList=',this.studentList,this.studentId)
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询信息异常',
+          icon: 'none'
+        })
+      }
+      console.log('res',res)
+      
+      
+    };
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .course-list-container{
+    position: relative;
+  .nav{
+    display: flex;
+    // justify-content: space-between;
+    align-items: center;
+    padding: 0 40rpx;
+    background-color: @bg-white;
+    border-bottom: 1px solid @bg-gray; 
+    .item{
+      padding: 26rpx 20rpx;
+      border-bottom: 4rpx solid transparent;
+      color: @color-gray;
+      &.active{
+        color: @color-major;
+        border-color: @color-major;
+      }
+    }
+  }
+  .no-order{
+    padding-top: 450rpx;
+    text-align: center;
+    color: @bg-d;
+    i{
+      font-size: 120rpx;
+    }
+    .no-text{
+      margin-top: 40rpx;
+    }
+  }
+  }
+</style>

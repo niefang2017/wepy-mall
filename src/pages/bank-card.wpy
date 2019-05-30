@@ -1,0 +1,306 @@
+<!-- bank-card. 银行卡绑定 -->
+<template>
+  <view class='bank-card-container h4'>
+    <form report-submit="true" @submit="submit" @reset="reset">
+      <!-- <view class="section">
+        <view class="section-title">取款方式</view>
+        <picker bindchange="methodPickerChange" name="payMethod" value="{{payMethodIndex}}" range-key="name" range="{{payMethodArray}}">
+          <view class="picker h5">
+            <view>{{payMethodArray[payMethodIndex].name}} <i class="iconfont icon-xiangyoujiantou"></i></view>
+          </view>
+        </picker>
+      </view> -->
+      <block wx:if="{{payMethodIndex===0}}">
+        <view class="section">
+          <view class="section-title"><text class="red">*</text>银行名称</view>
+          <input value="{{cardInfo.FNAME}}" type="text" name="FNAME" placeholder="请输入银行名称" placeholder-class="placeholder" maxlength="20" @blur="vailBankName"/>
+          <!-- <picker bindchange="bankPickerChange" name="payBank" value="{{payBankIndex}}" range-key="name" range="{{payBankArray}}">
+            <view class="picker h5">
+              <view>{{payBankArray[payBankIndex].name}} <i class="iconfont icon-xiangyoujiantou"></i></view>
+            </view>
+          </picker> -->
+        </view>
+        <view class="section">
+          <view class="section-title"><text class="red">*</text>开户支行</view>
+          <input value="{{cardInfo.FADDRESS}}" type="text" name="FADDRESS" placeholder="请输入开户支行" placeholder-class="placeholder" maxlength="20" @blur="vailBankName"/>
+        </view>
+        <view class="section">
+          <view class="section-title"><text class="red">*</text>银行卡号</view>
+          <input value="{{cardInfo.FBANKNO}}" type="number" name="FBANKNO" placeholder="请输入银行卡号" placeholder-class="placeholder" maxlength="20" @blur="vailBankNo"/>
+        </view>
+        <view class="section">
+          <view class="section-title"><text class="red">*</text>户名</view>
+          <input value="{{cardInfo.FBANKNAME}}" type="text" name="FBANKNAME" placeholder="请输入户名" placeholder-class="placeholder" maxlength="20" @blur="vailUser"/>
+        </view>
+        <view class="section">
+          <view class="section-title"><text class="red">*</text>手机号</view>
+          <input value="{{cardInfo.FPHONENO}}" type="number" name="FPHONENO" placeholder="请输入开户手机号" placeholder-class="placeholder" maxlength="11" @blur="vailTel"/> 
+        </view>
+      </block>
+      <block wx:elif="{{payMethodIndex===1}}">
+        <view class="section">
+          <view class="section-title">微信openid</view>
+          <input value="" type="text" name="openid" placeholder="请输入微信openid" placeholder-class="placeholder" maxlength="30"/> 
+        </view>
+      </block>
+      <block wx:elif="{{payMethodIndex===2}}">
+        <view class="section">
+          <view class="section-title">支付宝账号</view>
+          <input value="" type="text" name="alipay" placeholder="请输入支付宝账号" placeholder-class="placeholder" maxlength="30"/> 
+        </view>
+      </block>
+      <!-- <view class="section">
+        <view class="section-title">邮箱</view>
+        <input value="" type="text" name="email" placeholder="请输入邮箱" placeholder-class="placeholder" maxlength="30" @blur="vailEmal"/> 
+      </view> -->
+      <view class="btn-area">
+        <button class="btn btn-red" form-type="submit">提交</button>
+        <!-- <button form-type="reset">重置</button> -->
+      </view>
+    </form>
+    <zanToptips/>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import util from '@/utils/util';
+  import zanToptips from '@/components/common/zan-toptips'
+  export default class Bankcard extends wepy.page {
+    config = {
+      navigationBarTitleText: "银行卡绑定",
+    };
+
+    data = {
+      cardInfo:{
+        FNAME:'',
+        FADDRESS:'',
+        FBANKNAME:'',
+        FBANKNO:'',
+        FPHONENO:''
+      },
+      payMethodIndex: 0,
+      payBankIndex: 0,
+      payMethodArray: [
+        {
+          id: 0,
+          name: '银行卡'
+        },
+        /* {
+          id: 1,
+          name: '微信'
+        },
+        {
+          id: 2,
+          name: '支付宝'
+        } */
+      ],
+      payBankArray: [
+        {
+          id: 0,
+          name: '中国工商银行'
+        },
+        {
+          id: 1,
+          name: '中国农业银行'
+        },
+        {
+          id: 2,
+          name: '中国建设银行'
+        },
+        {
+          id: 3,
+          name: '中国邮政银行'
+        },
+        {
+          id: 4,
+          name: '中国银行'
+        },
+        {
+          id: 5,
+          name: '招商银行'
+        }
+      ]
+    };
+
+    components = {
+      zanToptips
+    };
+
+    methods = {
+      submit(e){
+        let param = e.detail.value
+        if(param.FNAME.replace(/\s+/g,'')===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入银卡名称', options: 2000 })
+        }
+        if(param.FADDRESS.replace(/\s+/g,'')===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入支行名称', options: 2000 })
+        }
+        if(!util.vailBankNo(param.FBANKNO)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的银行卡号', options: 2000 })
+        }
+        if(param.FBANKNAME.replace(/\s+/g,'')===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入户名', options: 2000 })
+        }
+        if(!util.vailPhone(param.FPHONENO)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的手机号', options: 2000 })
+        }
+        this.bindCard(param)
+        // console.log('提交',e,param)
+
+      },
+      reset(e){
+        console.log('重置',e)
+      },
+      vailBankName(e){
+        const value = e.detail.value;
+        if(value.length===0 || value===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入银行名称', options: 2000 })
+        }
+      },
+      vailBankNo(e){
+        const value = e.detail.value;
+        if(!util.vailBankNo(value)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的银行卡号', options: 2000 })
+        }
+      },
+      vailUser(e){
+        const value = e.detail.value;
+        if(value.length===0 || value===''){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入户名', options: 2000 })
+        }
+      },
+      vailEmal(e){
+        console.log('vailEmal',e)
+      },
+      vailTel(e){
+        const value = e.detail.value;
+        if(!util.vailPhone(value)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的手机号', options: 2000 })
+        }
+      },
+      methodPickerChange(e){
+        let value = e.detail.value;
+        this.payMethodIndex = Number(value);
+        console.log('e',e)
+      },
+      bankPickerChange(e){
+        let value = e.detail.value;
+        this.payBankIndex = Number(value);
+        console.log('e',e)
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    async onLoad() { 
+      await this.getPersonInfo();
+    };
+
+    onShow() { };
+    async getPersonInfo(){
+      let res = await api.personInfo({
+        query: {
+          method: 'GetPersonInfo',
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        this.cardInfo = res.data[0];
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询信息异常',
+          icon: 'none'
+        })
+      }
+    }
+    async delUser(id){
+      let res = await api.personInfo({
+        query: {
+          method: 'DeleteStudentInfo',
+          FSTUDENTID:id
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        tip.success('删除成功')
+        await this.getPersonInfo();
+      }else{
+        return tip.toast({
+          title: res.msg || '删除用户信息异常',
+          icon: 'none'
+        })
+      }
+    }
+    async bindCard(param){
+      let res = await api.personInfo({
+        query: {
+          method: 'SetPersonInfo',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        wepy.navigateBack({
+          delta: 1
+        });
+        
+        tip.success(res.msg || '绑定成功')
+      }
+      else{
+        return tip.toast({
+          title: res.msg || '绑定失败',
+          icon: 'none'
+        })
+      }
+    }
+  }
+</script>
+
+<style lang='less'>
+.bank-card-container{
+  position: relative;
+  background-color: #fff;
+  border-top: 1px solid #ddd;
+  .section{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 80rpx;
+    line-height: 80rpx;
+    padding: 0 26rpx;
+    border-bottom: 1px solid #ddd;
+    .section-title{
+      width: 160rpx;
+      .red{
+        color: #ff6a3c;
+        margin-right: 2rpx;
+      }
+    }
+    picker,input{
+      text-align: right;
+      width: 558rpx;
+      i{
+        font-size: 24rpx;
+      }
+    }
+  }
+  .btn-area{
+    margin-top: 30rpx;
+    padding: 0 26rpx;
+    .btn{
+      border-radius: 6rpx;
+    }
+    .btn-red{
+      background-color: #ff6a3c;
+    }
+  }
+}
+</style>

@@ -1,0 +1,316 @@
+<template>
+  <view wx:if="{{show}}">
+    <form report-submit="true" @submit="submit" @reset="reset">
+      <view class="filter-slider h4">
+        <scroll-view  class="filter-content" style="height:{{windowHeight}}px;" scroll-y scroll-with-animation>
+          <!-- <view class="class-name">
+            <view class="title">班级名称</view>
+            <input value="" type="text" name="className" placeholder="支持模糊查询" placeholder-class="placeholder" maxlength="20"/>
+          </view> -->
+          <view class="block" wx:if="{{silder.items.length>0}}">
+            <view class="title">课程名称</view>
+            <view class="item-box">
+              <repeat for="{{silder.items}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="items">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+          <view class="block" wx:if="{{silder.classes.length>0}}">
+            <view class="title">班级名称</view>
+            <view class="item-box">
+              <repeat for="{{silder.classes}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="classes">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+          <view class="block" wx:if="{{silder.classTypes.length>0}}">
+            <view class="title">课程类型</view>
+            <view class="item-box">
+              <repeat for="{{silder.classTypes}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="classTypes">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+          <view class="block" wx:if="{{silder.classAdresses.length>0}}">
+            <view class="title">课程地址</view>
+            <view class="item-box">
+              <repeat for="{{silder.classAdresses}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="classAdresses">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+          <view class="block" wx:if="{{silder.terms.length>0}}">
+            <view class="title">学期</view>
+            <view class="item-box">
+              <repeat for="{{silder.terms}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="terms">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+          <view class="block" wx:if="{{silder.weeks.length>0}}">
+            <view class="title">星期</view>
+            <view class="item-box">
+              <repeat for="{{silder.weeks}}" key="index" index="index" item="item">
+                <view class="item {{item.isSelect?'select':''}}" @tap.stop="selectEvent" data-index="{{index}}" data-type="weeks">{{item.name}}</view>
+              </repeat>
+            </view>
+          </view>
+        
+        </scroll-view>
+        <view class="btn-group">
+          <view class="btn-left-box">
+            <button class="button" form-type="reset">重置</button>
+          </view>
+          <view class="btn-right-box">
+            <!-- <view class="button" @tap="SearchFilter">确认</view> -->
+            <button class="button btn btn-red" form-type="submit">确认</button>
+          </view>
+        </view>
+      </view>
+    </form>
+    <view class="modal-overlay modal-overlay-visible" @tap="close()"></view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy'
+  import {
+    connect
+  } from 'wepy-redux';
+  @connect({
+    windowHeight(state) {
+      return state.user.systemInfo.windowHeight-state.user.systemInfo.windowWidth/750*100
+    }
+  })
+  export default class FilterSlider extends wepy.component {
+    props ={
+      silder:{}
+    }
+    data = {
+      show: false,
+      a: 0,
+      skuval: "",
+      chooseOpt:{
+        item:'',
+        className:'',
+        courseType:'',
+        courseAddress:'',
+        semester:'',
+        week:'',
+      }
+    }
+    events = {
+      'show-filter':(...args)=>{
+        let show = args[0]
+        this.swictchOverlay();
+      }
+    }
+    methods = {
+      close() {
+        this.show = false;
+      },
+      submit(e){
+        let chooseOpt = this.chooseOpt;
+        this.$emit('filter-search', chooseOpt);
+        this.swictchOverlay();
+      },
+      reset(e){
+        let silder = this.silder;
+        if(silder.items && silder.items.length>0){
+          silder.items.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        if(silder.classes && silder.classes.length>0){
+          silder.classes.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        
+        if(silder.classTypes && silder.classTypes.length>0){
+          silder.classTypes.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        
+        if(silder.classAdresses && silder.classAdresses.length>0){
+          silder.classAdresses.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        
+        if(silder.terms && silder.terms.length>0){
+          silder.terms.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        
+        if(silder.weeks && silder.weeks.length>0){
+          silder.weeks.map((obj)=>{
+            obj.isSelect=false
+          })
+        }
+        this.chooseOpt={
+          item:'',
+          className:'',
+          courseType:'',
+          courseAddress:'',
+          semester:'',
+          week:'',
+        }
+        this.$apply();
+      },
+      selectEvent(e) {
+        let {index,type} = e.currentTarget.dataset;
+        let chooseOpt = this.chooseOpt;
+        this.silder[type].filter((obj,i)=>{
+          
+          if(index===i){
+            switch (type) {
+              case 'items':
+                chooseOpt['item']=this.silder[type][index].value;
+                break;
+              case 'classes':
+                chooseOpt['className']=this.silder[type][index].value;
+                break;
+              case 'classTypes':
+                chooseOpt['courseType']=this.silder[type][index].value;
+                break;
+              case 'classAdresses':
+                chooseOpt['courseAddress']=this.silder[type][index].value;
+                break;
+              case 'terms':
+                chooseOpt['semester']=this.silder[type][index].value;
+                break;
+              case 'weeks':
+                chooseOpt['week']=this.silder[type][index].value;
+                break;
+              default:
+                break;
+            }
+            
+            return this.silder[type][index].isSelect=true;
+          }else{
+            return this.silder[type][i].isSelect=false;
+          }
+        });
+      }
+    }
+    onLoad() {}
+    swictchOverlay() {
+      this.show = !this.show;
+      this.$apply();
+    }
+  }
+</script>
+
+<style lang="less">
+  .filter-slider {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: 600rpx;
+    z-index: 106003;
+    background: #ffffff;
+    .filter-content{
+    }
+    .class-name{
+      margin: 30rpx;
+      .title{
+        margin-bottom: 26rpx;
+      }
+      input{
+        padding: 8rpx 10rpx;
+        border: 1px solid #ddd;
+        border-radius: 10rpx;
+      }
+    }
+    .title{
+      font-weight: 600;
+      padding-left: 20rpx;
+    }
+  }
+  .block {
+    color: #000;
+    margin-top: 20rpx;
+    // padding-left: 30rpx;
+  }
+  .item-box {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 20rpx;
+    padding-bottom: 20rpx;
+    padding-left: 10rpx;
+    border-bottom: 1px solid #efefef;
+    .item {
+      position: relative;
+      margin:10rpx;
+      text-align: center;
+      border: 1px solid #c6c6c6;
+      border-radius: 5rpx;
+      min-width: 100rpx;
+      padding: 16rpx;
+      font-size: 24rpx;
+      color: #2c2c2c;
+    }
+    .select {
+      border: 1px solid #f23737;
+      color: #f23737;
+    }
+    .icon-bottom-check {
+      position: absolute;
+      bottom: -4rpx;
+      right: 0;
+      color: #f23737;
+      font-size: 24rpx;
+    }
+  }
+  .btn-group {
+    display: flex;
+    align-items: center;
+    position: fixed;
+    bottom: 20rpx;
+    width: 100%; // padding:0rpx 20rpx;
+    // border-top: 1px solid #efefef;
+    .button {
+      height: 85rpx;
+      line-height: 85rpx;
+      text-align: center;
+      margin: 0 auto;
+      width: 100%;
+      -moz-border-radius: 5rpx;
+      -webkit-border-radius: 5rpx;
+      border-radius: 5rpx;
+    }
+    .btn-left-box {
+      width: 280rpx;
+      padding: 0rpx 10rpx;
+      .button{
+
+        background-color: #eee;
+      }
+    }
+    .btn-right-box {
+      width: 280rpx;
+      padding: 0rpx 10rpx;
+      .button{
+        background-color: #ff6a3c;
+        color: #fff;
+      }
+    }
+  }
+  /*遮罩层*/
+  .modal-overlay.modal-overlay-visible {
+    opacity: .4;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 10600;
+    transition-duration: 400ms;
+  }
+</style>

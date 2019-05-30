@@ -1,0 +1,224 @@
+<!--筛选栏-->
+<template>
+  <view class="bar">
+    <view class="filter">
+      <!-- <view class="nav {{currentType=='zonghe' ? 'nav-active' : ''}}" data-current="zonghe" @tap="orderBy">综合</view> -->
+      <view class="grid nav">
+        <view class="price {{currentType=='zonghe' ? 'nav-active' : ''}}" data-current="zonghe" @tap.stop="orderBy">综合</view>
+        <view class="">
+          <view class="arrow-up {{zongheArrowType=='desc' ? 'arrow-up-red' : 'arrow-up-gray'}}"></view>
+          <!-- 向下的三角形 -->
+          <view class="arrow-down {{zongheArrowType=='asc' ? 'arrow-down-red' : 'arrow-down-gray'}} "></view>
+        </view>
+      </view>
+      <view class="grid nav">
+        <view class="price {{currentType=='sale' ? 'nav-active' : ''}}" data-current="sale" @tap.stop="orderBy">销量</view>
+        <view class="">
+          <view class="arrow-up {{saleArrowType=='desc' ? 'arrow-up-red' : 'arrow-up-gray'}}"></view>
+          <!-- 向下的三角形 -->
+          <view class="arrow-down {{saleArrowType=='asc' ? 'arrow-down-red' : 'arrow-down-gray'}} "></view>
+        </view>
+      </view>
+      <view class="grid nav">
+        <view class="price {{currentType=='price' ? 'nav-active' : ''}}" data-current="price" @tap.stop="orderBy">价格</view>
+        <view class="">
+          <view class="arrow-up {{priceArrowType=='desc' ? 'arrow-up-red' : 'arrow-up-gray'}}"></view>
+          <!-- 向下的三角形 -->
+          <view class="arrow-down {{priceArrowType=='asc' ? 'arrow-down-red' : 'arrow-down-gray'}} "></view>
+        </view>
+      </view>
+      <view class="nav" @tap="filterSearch">筛选<i class="iconfont icon-filter"></i></view>
+    </view>
+    <!--筛选测栏-->
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class FilterBar extends wepy.component {
+    data = {
+      currentType: "",
+      priceArrowType: "",
+      saleArrowType:'',
+      zongheArrowType:'desc',
+      flag: false,
+      type: "desc"
+    }
+    components = {}
+    methods = {
+      filterSearch() {
+        // this.$invoke('filterSlider', 'swictchOverlay', true);
+      },
+      orderBy(e) {
+        let that = this;
+        if (that.data.currentType == e.target.dataset.current) {
+          // if (e.target.dataset.current !== "price" && e.target.dataset.current !== "sale") {
+          //   return false;
+          // }
+        } else {
+          that.currentType = e.target.dataset.current;
+        }
+        that.changSort(e.target.dataset.current)
+        that.$apply();
+      }
+    }
+    changSort(orderBy) {
+      let that = this;
+      if (orderBy === "zonghe") {
+        this.saleArrowType = "";
+        this.priceArrowType = "";
+        if (this.zongheArrowType === "desc") {
+          this.zongheArrowType = "asc";
+        } else {
+          this.zongheArrowType = "desc";
+        }
+        // that.$apply()
+        this.$emit("changType", {
+          name: orderBy,
+          type: this.zongheArrowType
+        });
+      } 
+      else if (orderBy === "sale") {
+        this.priceArrowType = "";
+        this.zongheArrowType = "";
+        if (this.saleArrowType === "desc") {
+          this.saleArrowType = "asc";
+        } else {
+          this.saleArrowType = "desc";
+        }
+        // that.$apply()
+        this.$emit("changType", {
+          name: orderBy,
+          type: this.saleArrowType
+        });
+      }
+      else if (orderBy === "price") {
+        this.saleArrowType = "";
+        this.zongheArrowType = "";
+        if (this.priceArrowType === "desc") {
+          this.priceArrowType = "asc";
+        } else {
+          this.priceArrowType = "desc";
+        }
+        // that.$apply()
+        this.$emit("changType", {
+          name: orderBy,
+          type: this.priceArrowType
+        });
+      }
+      else {
+        this.saleArrowType = "";
+        this.priceArrowType = "";
+        this.zongheArrowType = "";
+      }
+      that.$apply()
+    }
+
+    setSkuVal (sku) {
+      /*this.type = "sku";
+      this.currentType = sku;*/
+      this.$emit("changType", {
+        name: "sku",
+        type: sku
+      });
+    }
+
+    watch = {
+      // currentType(newValue) {
+      //   this.$emit("changType", {
+      //     name: newValue,
+      //     type: 'desc'
+      //   });
+      // },
+      // zongheArrowType(newValue, oldValue) {
+      //   this.$emit("changType", {
+      //     name: "zonghe",
+      //     type: newValue
+      //   });
+      // },
+      // priceArrowType(newValue, oldValue) {
+      //   this.$emit("changType", {
+      //     name: "price",
+      //     type: newValue
+      //   });
+      // },
+      // saleArrowType(newValue, oldValue) {
+      //   this.$emit("changType", {
+      //     name: "sale",
+      //     type: newValue
+      //   });
+      // }
+    }
+    events = {
+      filterSku(sku) {
+        console.log("filterBar.sku...."+sku);
+        this.setSkuVal(sku);
+        /*this.$emit("changType", {
+          name: "sku",
+          type: sku
+        });*/
+      }
+    }
+  }
+</script>
+
+<style lang="less">
+  .filter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #fff;
+    .nav {
+      color: #000000;
+      font-size: 26rpx;
+      padding: 12px 20px;
+    }
+    .nav-active {
+      color: #f03939;
+    }
+    .icon-filter {
+      font-size: 26rpx;
+      color: #666;
+      margin-left: 5rpx;
+    }
+  }
+  .price {
+    color: #000000;
+    font-size: 26rpx;
+  }
+  .grid {
+    display: flex;
+    align-items: center;
+  }
+  /*向上*/
+  .arrow-up-red {
+    border-color: transparent transparent #f03939;
+  }
+  .arrow-down-red {
+    border-color: #f03939 transparent transparent;
+  }
+  .arrow-up-gray {
+    border-color: transparent transparent #ccc;
+  }
+  .arrow-down-gray {
+    border-color: #ccc transparent transparent;
+  }
+  .arrow-up {
+    width: 0;
+    height: 0;
+    border-width: 0 10rpx 10rpx;
+    border-style: solid;
+    margin: 9rpx 10rpx;
+    position: relative;
+  }
+  /*向下*/
+  .arrow-down {
+    width: 0;
+    height: 0;
+    border-width: 10rpx 10rpx 0;
+    border-style: solid;
+    /*灰 透明 透明 */
+    margin: 9rpx 10rpx;
+    position: relative;
+  }
+</style>

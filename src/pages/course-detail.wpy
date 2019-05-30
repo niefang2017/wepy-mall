@@ -1,0 +1,1168 @@
+<!-- course-detail 课程详情 -->
+<template>
+  <view class='course-container'>
+    <view class="banner">
+      <swiper wx:if="{{opts.HeadImages.length>0}}" class="swiper" bindchange="swiperEvents" indicator-active-color="{{swiperOpts.indicatorActiveColor}}" indicator-dots="{{swiperOpts.indicatorDots}}" autoplay="{{swiperOpts.autoplay}}" interval="{{swiperOpts.interval}}"
+        duration="{{swiperOpts.duration}}" circular="true">
+        <repeat for="{{opts.HeadImages}}" key="index" index="index" item="item">
+          <swiper-item>
+            <image src="{{item.Images}}" class="slide-image" mode="aspectFit" lazy-load="true" />
+          </swiper-item>
+        </repeat>
+      </swiper>
+      <view class="current-text">{{swiperOpts.current}}/{{opts.HeadImages.length}}</view>
+    </view>
+    <view class="banner-content">
+      <view class="h2 title">{{opts.Chinese}}</view>
+      <view class="h5 desc" wx:if="{{opts.desc}}">{{opts.desc}}</view>
+      <view class="price-info">
+        <text class="h4 price">￥{{skuInfo.discountPrice?skuInfo.discountPrice:opts.UnitPrice}}</text>
+        <text class="dis-price" wx:if="{{skuInfo.price > skuInfo.discountPrice}}">￥{{skuInfo.price}}</text>
+      </view>
+      <view class="tags">
+        <repeat for="{{opts.tags}}" key="index" index="index" item="item">
+          <text class="h6">{{item}}</text>
+        </repeat>
+      </view>
+    </view>
+    <view class="detail-bottom">
+      <view class="flex-container">
+        <view class="item" @tap="goHome">
+          <i class="iconfont icon-home"></i>
+          <!-- <view class="h5 small">首页</view> -->
+        </view>
+        <view class="item">
+          <i class="iconfont icon-xiaoxizhongxin"></i>
+          <!-- <view class="h5 small">客服</view> -->
+          <button open-type="contact" class="contact"></button>
+        </view>
+        <view class="item transform-btn" wx:if="{{isTransform}}" @tap="transformClass">转班</view>
+        <view wx:if="{{!isTransform}}" class="item" @tap="openCart">
+          <i class="icon-cart-count" wx:if="{{myCartList.length>0}}">{{myCartList.length}}</i>
+          <i class="iconfont icon-gouwuche"></i>
+        </view>
+        <view wx:if="{{!isTransform}}" @tap="openRules" class="btn btn-cart">加入购物车</view>
+        <view wx:if="{{!isTransform}}" @tap="tackOrder" class="btn btn-buy">立即购买</view>
+      </view>
+    </view>
+    <view class="filter-list">
+      <view class="item h5" @tap="openRules">
+        <text class="gray key">已选</text>
+        <text class="text">
+              <repeat for="{{chooseSkuNames}}" key="index" index="index" item="item">
+                <text>{{index>0?' ,':''}}{{item}}</text>
+        </repeat>
+        </text>
+        <i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+      <view wx:if="{{opts.isVirtualProduct==='0'}}" class="item h5" @tap="openAddr">
+        <text class="gray key">送至</text><text class="text">{{addressInfo.cityName }} {{addressInfo.userName}}</text><i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+      <view class="item h5" @tap="chooseStudents">
+        <text class="gray key">已选学员</text><text class="text">{{studentInfo.FNAME}} {{studentInfo.FPhone}}</text><i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+    </view>
+    <view class="rich-container">
+      <view class="h4 title">
+        <view @tap="handleChangeTag(0)" class="tag {{currentTag===0?'active':''}}">商品详情</view>
+        <view @tap="handleChangeTag(1)" class="tag {{currentTag===1?'active':''}}">用户评价</view>
+      </view>
+      <view hidden="{{currentTag===1}}" >
+        <repeat for="{{opts.DetailImages}}" key="index" index="index" item="item">
+          <image src="{{item.Images}}" mode="scaleToFill" lazy-load="true"></image>
+        </repeat>
+      </view>
+      <!-- <rich-text nodes="{{detailInfo}}" bindtap="tap"></rich-text> -->
+      
+    </view>
+    
+    <view class="rate-container" wx:if="{{rateList.length>0}}" hidden="{{currentTag===0}}" >
+      <view class="h5 title">
+        <view><text class="h4">全部评价</text> {{ratePercentage?'('+rateList.length+')':''}} </view>
+        <view wx:if="{{ratePercentage}}"><text class="red-text">{{ratePercentage}}%</text>满意</view>
+      </view>
+      <view class="rate-list">
+        <repeat for="{{rateList}}" key="index" index="index" item="item">
+          <view class="session h4">
+              <view class="row">
+                <view class="col">
+                  <image class="head" src="{{item.avatarUrl}}" mode="scaleToFill" lazy-load="true"></image>
+                  <text class="name">{{item.name}}</text>
+                  <rate :value.sync="item.evaluategrade" :istap="false"></rate>
+                </view>
+                <view class="col">
+                  {{item.createDate}}
+                </view>
+              </view>
+              <view class="content">
+                {{item.remark}}
+              </view>
+          </view>
+        </repeat>
+      </view>
+    </view>
+    <view class="over-model {{hidden?'hidden':''}}" @tap="closeModal"></view>
+    <view class="panle-model {{hidden?'hidden':''}}" animation="{{animationData}}">
+      <i class="iconfont icon-cuowu close-modal" @tap="closeModal"></i>
+      <view class="pic-box">
+        <view class="item">
+          <image src="{{skuInfo.productImage?skuInfo.productImage:opts.BuyImage}}" class="small-image" mode="aspectFit" lazy-load="true" />
+        </view>
+        <view class="item">
+          <view class="h4 price">￥{{skuInfo.discountPrice?skuInfo.discountPrice:opts.UnitPrice}}</view>
+          <view class="h5">请选择规格属性</view>
+        </view>
+      </view>
+      <scroll-view scroll-y="true" style="height:570rpx">
+        <view class="rules-contet">
+          <repeat for="{{opts.rules}}" key="index" index="index" item="item">
+            <view class="tag-title h5">{{item.label}}</view>
+            <view class="tags">
+              <repeat wx:if="{{item.children && item.children.length>0}}" for="{{item.children}}" key="idx" index="idx" item="j">
+                <text class="t {{j.select?'select':''}}" @tap="tagEvent" data-parent-idx="{{index}}" data-idx="{{idx}}">{{j.label}}</text>
+              </repeat>
+            </view>
+          </repeat>
+          <view class="tag-title h5">数量 {{skuInfo.store>0? skuInfo.store:' (暂时缺货)'}}</view>
+          <view class="tags" wx:if="{{skuInfo.store>0}}">
+            <view class="buy-num">
+              <view class="jian-btn {{orderNum ==1? 'disabled' : ''}}" @tap.stop="jianBtnTap">-</view>
+              <input type="number" bindinput="bindOrderNumInput" value="{{orderNum}}" />
+              <view class="jia-btn {{orderNum >= opts.number? 'disabled' : ''}}" @tap.stop="jiaBtnTap">+</view>
+            </view>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="btn-area">
+        <button @tap.stop="tackCart" class="btn btn-red {{skuInfo.store===0?'no-store':''}}">确定</button>
+      </view>
+    </view>
+    <view class="set-container" wx:if="{{openSettingStatus}}" style="min-height:{{windowHeight}}px">
+      <view class="set-content">
+        <view class="h5 text">需要授权获取您的地址</view>
+        <button class="btn-red" open-type="openSetting">打开授权设置页</button>
+      </view>
+    </view>
+    <view class="affix {{fixedStatus?'active':''}}" @tap.stop="scrollTopEvent"><i class="iconfont icon-shangfan"></i></view>
+  </view>
+</template>
+
+<script>
+  let scrolltime=null;
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import rate from '@/components/common/rate';
+  import {
+    UPDATE_ORDER_INFO,
+    UPDATE_CART_LIST,
+    UPDATE_CARL_STATUS
+  } from '@/store/types/goods'
+  import {
+    getStore,
+    setStore,
+    connect
+  } from 'wepy-redux';
+  @connect({
+    windowHeight(state) {
+      return state.user.systemInfo.windowHeight
+    }
+  })
+  export default class Coursedetail extends wepy.page {
+    config = {
+      navigationBarTitleText: "商品详情",
+    };
+    data = {
+      swiperOpts: {
+        indicatorDots: false,
+        autoplay: false,
+        interval: 3000,
+        duration: 1000,
+        current: 1,
+        indicatorActiveColor: "@bg-whitefff",
+      },
+      opts: {},
+      detailInfo: "",
+      cartOpts: {
+        count: 0,
+        id: ''
+      },
+      animationData: '',
+      hidden: true,
+      orderNum: 1,
+      addressInfo: {},
+      openSettingStatus: false,
+      skuInfo: {
+        store:9999
+      },
+      chooseSku:{},
+      chooseSkuNames:[],
+      successSkuArr:[],
+      myCartList:[],
+      materialId:'',
+      action:0,
+      studentInfo:{},
+      rateList:[],
+      ratePercentage:0,
+      currentTag:0,
+      fixedStatus:false,
+      isTransform:false,
+      oldOrderId:''
+    };
+    components = {
+      rate:rate
+    };
+    methods = {
+      goHome(){
+        wepy.switchTab({ url: '/pages/index' });
+      },
+      chooseStudents(){
+        wepy.navigateTo({ url: '/pages/mine-list?type=1' });
+      },
+      swiperEvents(e) {
+        let {
+          current
+        } = e.detail
+        this.swiperOpts.current = current + 1;
+        // this.$apply();
+      },
+      tackCart(e) {
+        let opts = this.opts;
+        let chooseSku = this.chooseSku //this.checkRule();
+        let {
+          count,
+          id
+        } = this.cartOpts;
+        console.log('checkRule,chooseSkuNames', chooseSku,this.chooseSkuNames)
+        let rules = this.opts.rules;
+        if (!this.opts.rules || this.opts.rules.length === 0) {
+          return tip.toast({
+            title: '商品规格异常',
+            icon: 'none'
+          })
+        }
+        let chooseSkuLen = Object.keys(chooseSku).length;
+        if (chooseSkuLen === 0 || chooseSkuLen < rules.length) {
+          if (this.hidden) {
+            this.openRules()
+          } else {
+            return tip.toast({
+              title: '请先选择商品属性',
+              icon: 'none'
+            })
+          }
+        } else {
+          if (!this.hidden) {
+            this.closeModal()
+          }
+          let param = Object.assign({},chooseSku,{count:this.orderNum})
+          if(this.action === 0){
+            this.submitCard(param)
+          }else if(this.action === 1){
+            this.submitToOrder(param,false)
+          }else if (this.action === 2){
+            this.submitToOrder(param,true)
+          }
+        }
+      },
+      tackOrder(e) {
+        this.action=1;
+        this.openRules();
+      },
+      openRules(e) {
+        this.action=0;
+        this.openRules()
+      },
+      transformClass(e){
+        this.action=2;
+        this.openRules()
+      },
+      openAddr(e) {
+        wx.getSetting({
+          success: (res) => {
+            let authSetting = res.authSetting;
+            if (res.authSetting['scope.address']) {
+                wx.chooseAddress({
+                  success: (ares) => {
+                    this.addressInfo = ares;
+                    wepy.setStorageSync('addressInfo', ares);
+                    this.$apply();
+                  }
+                })
+            }else{
+              if(res.authSetting['scope.address']===false){
+                wx.openSetting({
+                  success(res){
+                    console.log('打开设置',res.authSetting)
+                  }
+                })
+              }else{
+                wx.chooseAddress({
+                  success: (ares) => {
+                    this.addressInfo = ares;
+                    wepy.setStorageSync('addressInfo', ares);
+                    this.$apply();
+                  },
+                })
+              }
+            }
+          }
+        })
+        
+      },
+      closeModal() {
+        this.closeModal()
+      },
+      tagEvent(e) {
+        let {
+          parentIdx,
+          idx
+        } = e.currentTarget.dataset;
+        let currentParent = this.opts.rules[parentIdx]
+        let chooseSku=this.chooseSku;
+        if (!currentParent.children) return
+        let newArr = currentParent.children.filter((obj, i) => {
+          if (i === idx) {
+            // this.skuInfo = currentParent.children[i]
+            chooseSku[currentParent.value]=currentParent.children[i].value
+            return currentParent.children[i].select = true;
+          } else {
+            return currentParent.children[i].select = false;
+          }
+        })
+        console.log('currentParent，chooseSku',currentParent,chooseSku)
+        // return
+        if (Object.keys(chooseSku).length=== this.opts.rules.length){
+          this.getSku(chooseSku)
+        }
+        // this.$apply();
+      },
+      jiaBtnTap(e) {
+        let numbers = this.opts.number;
+        if (this.orderNum >= numbers) return
+        this.orderNum++;
+      },
+      jianBtnTap() {
+        if (this.orderNum > 1) {
+          this.orderNum--;
+        }
+      },
+      bindOrderNumInput(e) {
+        let numbers = this.opts.number;
+        let val = e.detail.value;
+        if (Number(val) >= Number(numbers)) {
+          return this.orderNum = numbers;
+        }
+        if (val < 1) {
+          return this.orderNum = 1;
+        }
+        this.$apply();
+      },
+      openCart() {
+        wepy.switchTab({
+          url: `/pages/shop-cart`
+        });
+      },
+      handleChangeTag(value){
+        this.currentTag = Number(value);
+        this.$apply();
+      },
+      scrollTopEvent(){
+        wx.pageScrollTo({
+          scrollTop: 0,
+          duration: 300
+        })
+      }
+
+    };
+    events = {};
+    watch = {
+      skuInfo(n,o){
+        console.log('n',n)
+      },
+      myCartList(n,o){
+        let store = getStore();
+        if(store.getState().goods.cartIsUpDate) return
+        store.dispatch({
+          type: UPDATE_CARL_STATUS,
+          cartIsUpDate: true
+        });
+      }
+    };
+    computed = {};
+    async onLoad(e) {
+      let addressInfo = wepy.getStorageSync('addressInfo');
+      this.addressInfo = addressInfo;
+      // wx.getSetting({
+      //   success: (res) => {
+      //     let authSetting = res.authSetting;
+      //     if (authSetting && authSetting['scope.address']) {
+      //       this.openSettingStatus = false
+      //     } else {
+      //       this.openSettingStatus = true
+      //     }
+      //   }
+      // })
+      if (e.id) {
+        console.log('详情',e)
+        this.materialId = e.id;
+        this.isTransform = e.type && e.type==="transform"?true:false;
+        this.oldOrderId= e.oldOrderId ?e.oldOrderId:'';
+        this.$apply();
+        await this.getGoodsDetail(e.id);
+        await this.getRateList(e.id);
+        await this.getAllCart();
+        
+      }
+      // await this.filterSku({size:'100009',count:1})
+      /* wepy.showToast({
+        title: `课程id,${e.code}`, //提示的内容,
+        icon: 'none', //图标,
+        duration: 2000, //延迟时间,
+        mask: true, //显示透明蒙层，防止触摸穿透,
+        success: res => {}
+      }); */
+    };
+    onShow() {
+      this.openSettingStatus = false;
+      let animation = wx.createAnimation({
+        transformOrigin: "50% 50%",
+        duration: 200,
+        timingFunction: "linear",
+        delay: 0
+      })
+      this.animation = animation;
+      let studentInfo = wepy.getStorageSync('studentInfo');
+      let store = getStore();
+      let studentInfoStore = store.getState().goods.studentInfo;
+      if (Object.keys(studentInfoStore).length>0 && studentInfoStore.id){
+        studentInfo.FNAME=studentInfoStore.name;
+        studentInfo.FNAMEEN=studentInfoStore.englishName;
+        studentInfo.FSEX=studentInfoStore.sex;
+        studentInfo.FLiveArea=studentInfoStore.liveArea;
+        studentInfo.FPhone=studentInfoStore.myPhone;
+        studentInfo.FMotherPhone=studentInfoStore.motherPhone;
+        studentInfo.FFatherPhone=studentInfoStore.fatherPhone;
+        studentInfo.FClassArea=studentInfoStore.classArea;
+        studentInfo.FSTUDENTID=studentInfoStore.id;
+        this.studentInfo = studentInfo;
+      }
+      
+    };
+    onPageScroll(e){
+      const windowHeight = 100//this.windowHeight || 500;
+      const fixedStatus = this.fixedStatus;
+      if(scrolltime){
+        clearTimeout(scrolltime)
+      }
+      scrolltime = setTimeout(()=>{
+        const {scrollTop} =e;
+        if(scrollTop>windowHeight){
+          this.fixedStatus = true
+        }else{
+          this.fixedStatus = false
+        }
+        this.$apply();
+        console.log(scrollTop,windowHeight,this.fixedStatus)
+      },300)
+    };
+    async getGoodsDetail(id) {
+      console.log('==id',id)
+      let res = await api.getGoodsDetail({
+        query: {
+          method: 'GetBuyInfo',
+          materialId: id
+        },
+        method:'GET',
+        realUrl: true
+      })
+      if (res.code === 0 && res.data) {
+        const opts = res.data[0];
+        opts.number = 100;
+        this.opts = opts
+        this.$apply();
+      }
+    }
+    checkRule() {
+      let rules = this.opts.rules;
+      let chooseRules = []
+      let chooseOpt = {}
+      if (!rules || rules.length === 0) return
+      rules.forEach(element => {
+        if (element.children) {
+          element.children.forEach(c => {
+            if (c.select) {
+              chooseOpt[element.value]=c.value
+              chooseRules.push(c)
+            }
+          })
+        }
+      });
+      console.log('chooseOpt',chooseOpt)
+      return chooseOpt
+    }
+    openRules() {
+      this.hidden = false;
+      this.animation.height('783rpx').step();
+      this.setData({
+        animationData: this.animation.export()
+      })
+    }
+    closeModal() {
+      this.animation.height(0).step();
+      this.setData({
+        animationData: this.animation.export()
+      })
+      // this.animation = this.animation.export();
+      setTimeout(() => {
+        this.hidden = true;
+        this.$apply();
+      }, 100)
+    };
+    async getSku(param={}){
+      let res
+      if (Number(param[0])===0){
+        res = await api.querySku({
+          method: 'POST',
+          realUrl: true
+        })
+      }else{
+        res = await api.querySku({
+          query: {
+            ...param
+          },
+          method: 'POST',
+          realUrl: true
+        })
+      }
+      if(res.code===0){
+        res.data.store = Number(res.data.store);
+        this.opts.number = res.data.store;
+        this.orderNum = res.data.store===0?0:1;
+        this.skuInfo = res.data;
+        this.$apply();
+        console.log('this.skuInfo=',this.skuInfo)
+      }else{
+        return tip.toast({
+          title: res.msg || '获取sku信息异常',
+          icon: 'none'
+        })
+      }
+    };
+    async submitCard(param={}){
+      let res = await api.querySku({
+        query: {
+          method:'SubmitToCar',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        let count = param.count
+        this.filterSku(param)
+        this.skuInfo.store = Number(this.skuInfo.store)-Number(count)
+        this.opts.number = Number(this.skuInfo.store)-Number(count)
+        this.$apply();
+        tip.toast({
+          title: res.msg || '已经加入到购物车！',
+          icon: 'none'
+        })
+        await this.getAllCart();
+      }else{
+        return tip.toast({
+          title: res.msg || '添加购物车异常',
+          icon: 'none'
+        })
+      }
+    };
+    filterSku(param){
+      let chooseSkuNames = [];
+      let rules = this.opts.rules;
+      if(param.count){
+        delete param.count
+      }
+      for(const key in param){
+        console.log(key,param)
+          rules.filter((element,i)=>{
+            if(element.value===key){
+              element.children.filter((o)=>{
+                if(o.value ===param[key]){
+                  return chooseSkuNames.push(o.label)
+                }
+              })
+            }
+          })
+      }
+      this.chooseSkuNames = chooseSkuNames;
+      this.$apply();
+    };
+    async getAllCart(){
+      let res = await api.buyCarServer({
+        query: {
+          method:'LoadData',
+        },
+        realUrl: true
+      })
+      if(res.code ===0){
+        res.data.map(obj=>{
+          obj.FCOUNT = Number(obj.FCOUNT)
+        })
+        this.myCartList = res.data; 
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_CART_LIST,
+          cartList: res.data
+        });
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询购物车异常',
+          icon: 'none'
+        })
+      }
+    };
+    async submitToOrder(param,isTransform){
+      console.log('立即购物param',param,this.skuInfo)
+      let count = param.count?param.count:1;
+      this.filterSku(param)
+      let orderInfo= {
+        materialId: this.materialId,
+        skuIds:param,
+        skuInfo:this.skuInfo,
+        count:count,
+        chooseSkuNames:this.chooseSkuNames,
+        BuyImage: this.skuInfo.productImage?this.skuInfo.productImage:this.opts.BuyImage,
+        Chinese:this.opts.Chinese,
+        English:this.opts.English,
+        UnitPrice:this.opts.UnitPrice,
+        isVirtualProduct: this.opts.isVirtualProduct,
+        oldOrderId:this.oldOrderId
+      }
+      let store = getStore();
+      store.dispatch({
+        type: UPDATE_ORDER_INFO,
+        orderInfo: orderInfo
+      });
+      console.log('获取storegetState()',orderInfo)
+      let url = isTransform?`/pages/order-pay?type=0&oldOrderId=${this.oldOrderId}`:`/pages/order-pay?type=0`
+      
+      wepy.navigateTo({ url: url });
+    };
+    async getRateList(id){
+      let res = await api.courseHandle({
+        query: {
+          method: 'GetEvaluatesByProduct',
+          materialId: id
+        },
+        method:'GET',
+        realUrl: true
+      })
+      if (res.code === 0) {
+        if(!res.data || res.data.length===0) return;
+        let rateCount =0;
+        let ratePercentage =0;
+        res.data.map(obj=>{
+          const num = Number(obj.evaluategrade);
+          rateCount+=num;
+        })
+        ratePercentage = Number((rateCount/(res.data.length*5)*100).toFixed(2));
+        this.ratePercentage = ratePercentage;
+        this.rateList = res.data;
+        this.$apply();
+      }else{
+        return tip.toast({
+          title: res.msg || '查询评价异常',
+          icon: 'none'
+        })
+      }
+    }
+    scrollEvent(){
+      
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  image {
+    background-color: @bg-d;
+  }
+  .course-container {
+    position: relative;
+    padding-bottom: 100rpx;
+    .banner {
+      position: relative;
+      background-color: @bg-white;
+      .swiper {
+        height: 690rpx;
+        .slide-image {
+          width: 100%;
+          height: 100%;
+        }
+      }
+      .current-text {
+        position: absolute;
+        right: 20rpx;
+        bottom: 30rpx;
+        color: @color-white;
+        font-size: 20rpx;
+        padding: 4rpx 10rpx;
+        border-radius: 30rpx;
+        background-color: rgba(0, 0, 0, 0.6);
+      }
+    }
+    .banner-content {
+      padding: 34rpx 26rpx;
+      background-color: @bg-white;
+      .title {
+        line-height: 1.4;
+        /* white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; */
+      }
+      .desc {
+        margin-top: 16rpx;
+        color: @color-9;
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        word-break: break-all;
+      }
+      .price-info {
+        text {
+          &:first-child {
+            margin-left: 0;
+          }
+          margin-left: 20rpx;
+        }
+        .price {
+          font-weight: 600;
+          color: @color-danger;
+        }
+        .dis-price {
+          font-size: 18rpx;
+          color: @color-9;
+          text-decoration: line-through;
+        }
+      }
+      .tags {
+        text {
+          &:first-child {
+            margin-left: 0;
+          }
+          margin-left: 20rpx;
+          padding: 6rpx 10rpx;
+          border: 1px solid @color-major;
+          color: @color-major;
+        }
+      }
+    }
+    .detail-bottom {
+      width: 100%;
+      border-top: 1px solid @bg-gray;
+      position: fixed;
+      bottom: 0;
+      background: @bg-white;
+      z-index: 99;
+      .flex-container {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        position: relative;
+        .item {
+          position: relative;
+          height: 80rpx;
+          line-height: 80rpx;
+          border-right: 1px solid @bg-gray;
+          i {
+            font-size: 32rpx;
+          }
+          .icon-cart-count {
+            background-color: @color-danger;
+            color: @color-white;
+            height: 30rpx;
+            width: 30rpx;
+            display: inline-block;
+            line-height: 30rpx;
+            border-radius: 200rpx;
+            position: absolute;
+            right: 16rpx;
+            top: 16rpx;
+            font-size: 20rpx;
+          }
+          &:nth-child(3) {
+            border-right: none;
+          }
+          flex: 1;
+          text-align: center;
+          .small {}
+          .contact {
+            width: 100%;
+            height: 80rpx;
+            margin: 0 auto;
+            position: absolute;
+            text-align: center;
+            line-height: 80rpx;
+            left: 0; // 在客服上面
+            top: 0;
+            opacity: 0;
+          }
+        }
+        .transform-btn{
+          flex: 2;
+          height: 80rpx;
+          padding: 10rpx;
+          line-height: 80rpx;
+          font-size: 30rpx;
+          color: @color-white;
+          text-align: center;
+          background-color: @color-major;
+        }
+        .btn {
+          flex: 2;
+          height: 80rpx;
+          padding: 10rpx;
+          line-height: 80rpx;
+          font-size: 30rpx;
+          color: @color-white;
+          text-align: center;
+          &.btn-cart {
+            background-color: @color-warn;
+          }
+          &.btn-buy {
+            background-color: @color-major;
+          }
+        }
+      }
+    }
+    .filter-list {
+      margin-top: 20rpx;
+      padding: 0 26rpx;
+      background-color: @bg-white;
+      .item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative;
+        padding: 28rpx 0;
+        border-top: 1px solid @bg-gray;
+        &:first-child {
+          border: none;
+        }
+        .key {
+          // flex: 0 0 100rpx;
+          margin-right: 10rpx;
+          color: @color-9;
+        }
+        i {
+          color: @bg-d;
+          line-height: 32rpx;
+          font-size: 32rpx;
+          flex: 0 0 32rpx;
+        }
+        .text {
+          flex: 4;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          word-break: break-all;
+          text {
+            &:first-child {
+              margin-left: 0;
+            }
+            margin-left: 10rpx;
+          }
+        }
+      }
+    }
+    .rich-container {
+      height: 100%;
+      display: block;
+      margin-top: 20rpx;
+      .title {
+        text-align: center;
+        line-height: 80rpx;
+        background-color: @bg-white;
+        color: @color-6;
+        border-bottom: 1px solid @bg-gray;
+        display: flex;
+        padding: 0 26rpx;
+        .tag{
+          margin-right: 20rpx;
+          &.active{
+            pointer-events: none;
+            color: @color-major;
+          }
+        }
+      }
+      image {
+        width: 100%;
+        display: block;
+      }
+    }
+    .over-model {
+      position: fixed;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+      width: 100%;
+      height: 100%;
+      top: 0;
+    }
+    .panle-model {
+      position: fixed;
+      height: 0rpx;
+      width: 100%;
+      z-index: 1000;
+      background: @bg-white;
+      bottom: 0;
+      .close-modal {
+        width: 80rpx;
+        color: @color-gray;
+        text-align: center;
+        font-size: 32rpx;
+        height: 80rpx;
+        line-height: 80rpx;
+        position: absolute;
+        top: 20rpx;
+        right: 0rpx;
+      }
+      .pic-box {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        margin-top: -40rpx;
+        padding: 20rpx 26rpx;
+        .item {
+          flex: 0 0 120rpx;
+          image {
+            border: 2rpx solid @bg-white;
+            width: 116rpx;
+            height: 101rpx;
+          }
+          .price {
+            font-weight: 600;
+            color: @color-danger;
+            margin-top: 20rpx;
+            margin-bottom: 10rpx;
+          }
+          .residue {
+            color: rosybrown;
+            font-weight: normal;
+          }
+          &:last-child {
+            padding-left: 20rpx;
+            flex: 2;
+          }
+        }
+      }
+      .rules-contet {
+        .tag-title {
+          padding: 0 26rpx 10rpx;
+        }
+        .tags {
+          font-size: 24rpx;
+          padding: 20rpx 16rpx;
+          margin-bottom: 20rpx;
+          text {
+            padding: 10rpx 20rpx;
+            color: @color-6;
+            border: 1px solid @bg-d;
+            margin: 10rpx;
+            display:inline-block;
+            &.select {
+              color: @color-danger;
+              border-color: @color-danger;
+            }
+          }
+        }
+      }
+      .btn-area {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 9;
+        button {
+          border-radius: 0;
+          &.no-store{
+            pointer-events: none;
+            background-color: @bg-d;
+          }
+        }
+        
+      }
+      .buy-num {
+        width: 170rpx;
+        height: 48rpx;
+        line-height: 48rpx;
+        display: flex;
+        font-size: 24rpx;
+        text-align: center;
+        margin-left: 10rpx;
+        .jian-btn {
+          width: 48rpx;
+          height: 100%;
+          border-left: 1rpx solid #ccc;
+          border-bottom: 1rpx solid #ccc;
+          border-top: 1rpx solid #ccc;
+          border-bottom-left-radius: 6rpx;
+          border-top-left-radius: 6rpx;
+          &.disabled {
+            background-color: #f5f5f9;
+            border-color: #eee;
+            color: #ccc;
+          }
+        }
+        .jia-btn {
+          width: 48rpx;
+          height: 100%;
+          border-right: 1rpx solid #ccc;
+          border-bottom: 1rpx solid #ccc;
+          border-top: 1rpx solid #ccc;
+          border-bottom-right-radius: 6rpx;
+          border-top-right-radius: 6rpx;
+          &.disabled {
+            background-color: #f5f5f9;
+            border-color: #eee;
+            color: #ccc;
+          }
+        }
+        input {
+          width: 68rpx;
+          height: 48rpx;
+          min-height: 48rpx;
+          text-align: center;
+          font-size: 24rpx;
+          border: 1rpx solid #ccc;
+        }
+      }
+    }
+    .hidden {
+      display: none;
+    }
+    .set-container {
+      bottom: 0;
+      left: 0;
+      width: 100%; // height: 200rpx;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      position: fixed;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      .set-content {
+        background-color: @bg-white;
+        width: 640rpx;
+        padding: 26rpx;
+        .text {
+          margin-bottom: 26rpx;
+          color: @color-9;
+        }
+      }
+      .btn-red {
+        width: 100%;
+        color: @color-white;
+        background-color: @color-default;
+      }
+    }
+    .affix{
+      width: 100rpx;
+      height: 100rpx;
+      text-align: center;
+      line-height: 100rpx;
+      position: fixed;
+      right: 26rpx;
+      bottom: -100rpx;
+      border-radius: 50%;
+      background-color: @bg-white;
+      box-shadow: 0 6rpx 20rpx rgba(0, 0, 0, 0.3);
+      z-index: 98;
+      .transition(all 0.6s ease-out);
+      .transform(scale(0));
+      
+      &.active{
+        bottom: 200rpx;
+        .transform(scale(1));
+      }
+      i{
+        font-size: 46rpx;
+      }
+    }
+  }
+  .rate-container{
+    margin-top:20rpx;
+    background-color: @bg-white;
+    .title{
+      padding: 26rpx;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: rgba(255, 136, 85,0.04);
+      .red-text{
+        color: @color-major;
+      }
+    }
+  }
+  .rate-list{
+    background-color: @bg-white;
+    .session{
+      border-top: 1px solid @bg-gray;
+      padding: 26rpx;
+      &:first-child{
+        border-top: none;
+      }
+      .row{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        .col{
+          display:flex;
+          justify-content:space-between;
+          align-items: center;
+          .head{
+            width: 60rpx;
+            height: 60rpx;
+            border-radius: 50%;
+            padding: 1;
+            border:1px solid #fff;
+          }
+          .name{
+            margin-left: 10rpx;
+          }
+        }
+      }
+      .rate-row{
+        height: 40rpx;
+        line-height: 40rpx;
+        display: flex;
+        margin-left: 10rpx;
+        .iconfont{
+          font-size: 26rpx;
+          margin-left: 8rpx;
+          display: block;
+        }
+      }
+      .content{
+        margin-top: 20rpx;
+      }
+    }
+  }
+  .transition(@v){
+    transition:@v;
+    -ms-transition:@v; 
+    -moz-transition:@v; 
+    -webkit-transition:@v; 
+  }
+  .transform(@v){
+    transform:@v;
+    -ms-transform:@v; 
+    -moz-transform:@v; 
+    -webkit-transform:@v; 
+  }
+</style>

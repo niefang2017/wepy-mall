@@ -1,0 +1,360 @@
+<!-- order-item 订单item -->
+<template>
+  <view class='item-box' @tap="goOrderDetail({{order.orderId}})">
+    <view class="title">
+      <view>{{order.createTime}}</view>
+      <text class="status">{{status[order.status]}}</text>
+    </view>
+    <view class="goods-container">
+      <repeat for="{{order.detail}}" key="index" index="index" item="item">
+        <view class="goods-row">
+          <view class="goods-item">
+            <image class="logo" mode="aspectFit" src="{{item.pic}}" lazy-load="true"></image>
+          </view>
+          <view class="goods-item">
+            <view>{{item.product}}</view>
+            <view class="tags" wx:if="{{item.sku}}">
+              <repeat for="{{item.sku}}" key="jIdx" index="jIdx" item="j">
+                <text class="tag">{{jIdx>0?', ':''}}{{j}}</text>
+              </repeat>
+            </view>
+          </view>
+          <view class="goods-item">
+            <view class="price">
+              <text class="sup">￥</text>{{item.price}}
+            </view>
+            <view class="num">
+              x{{item.count}}
+            </view>
+          </view>
+        </view>
+      </repeat>
+    </view>
+    <view class="footer">
+      <i class="iconfont icon-xiangshangjiantou"></i>
+      <view class="foot-info">
+        <text>共{{order.goodsList.length}}件商品 实付金额: </text>
+        <view class="h3 price">
+          <text class="sup">￥</text>{{order.discountPrice}}
+        </view>
+      </view>
+    </view>
+    <view class="btn-container">
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{order.orderId}}" data-type="0" wx:if="{{order.status==='1'}}">取消订单</button>
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{order.orderId}}" data-type="1" wx:if="{{order.status === '9'}}">申请退款</button>
+      <button class="btn h4" @tap.stop="btnEvent" data-id="{{order.orderId}}" data-type="2" wx:if="{{order.status === '9' || order.status === '8'}}">删除订单</button>
+      <button class="btn h4" @tap.stop="goExpress" data-id="{{order.ExpressNumber}}" data-type="{{order.ExpressCompany}}" wx:if="{{order.ExpressNumber &&(order.status === '2' || order.status === '3' ||order.status === '9')}}">查看物流</button>
+      <button class="btn h4" wx:if="{{order.status === 9}}" @tap.stop="goRate(order)">评价晒单</button>
+      <!-- <button class="btn h4" @tap.stop="goRate({{order}})">评价晒单</button> -->
+      <button class="btn h4 btn-red" @tap.stop="btnEvent" data-id="{{order.orderId}}" data-type="100" wx:if="{{order.status==='1'}}">立即支付</button>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import {
+    UPDATE_RATE_ORDER_LIST,
+    UPDATE_RATE_INFO,
+    UPDATE_CARL_STATUS
+  } from '@/store/types/index'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Orderitem extends wepy.component {
+    props = {
+      order: {}
+    };
+    data = {
+      status: ['已删除','待付款', '待发货', '待收货', '退款中','已退款','退货中','已退货','已取消','已完成'],
+      actionArr:[{
+        text:'取消订单',
+        method:'CancelOrder'
+      },{
+        text:'申请退款',
+        method:'SubmitRejected'
+      },{
+        text:'删除订单',
+        method:'DeleteOrder'
+      }]
+    };
+    components = {};
+    methods = {
+      goOrderDetail(e){
+        let url = `/pages/order-info?id=${e}`
+        wepy.navigateTo({ url: url });
+        
+      },
+      goRate(order){
+        this.updateRateList(order)
+      },
+      goExpress(e){
+        const {id,type} = e.currentTarget.dataset;
+        let url = `/pages/express?type=${type?type:'huitongkuaidi'}&postid=${id?id:'71609701953604'}`
+        return wepy.navigateTo({ url: url });
+      },
+      btnEvent(e){
+        const {id,type} = e.currentTarget.dataset;
+        const actionArr = this.actionArr;
+        let param = {};
+        if(Number(type)===100){
+          // 支付
+          return this.payment({
+            orderId:id
+          })
+        }
+        if (Number(type)===2){
+          // 批量删除orderIds=1,2,3
+          param = {
+            method: actionArr[type].method,
+            orderIds: id
+          }
+        }else{
+          param = {
+            method: actionArr[type].method,
+            orderId: id
+          }
+        }
+        wx.showModal({
+          title: '提示',
+          content: `确定要${actionArr[type].text}吗？`,
+          showCancel: true,
+          confirmColor: '#ff6a3c',
+          success: res => {
+            if (res.confirm) {
+              console.log('你点击了确定')
+              this.handleAction(param,actionArr[type].text)
+            } else if (res.cancel) {
+              console.log('你点击了取消')
+            }
+          },
+          fail: res => {
+            console.log('modal失败',res)
+          }
+        });
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {
+      createTime(){
+        let time = this.data.order?this.data.order.createTime:'';
+        time= time.replace(/\//g,'-')
+        return time;
+      },
+      isExpress(){
+        let status= this.data.order?this.data.order.status:'';
+        let showExpressBtn = false;
+        if(status === '2' ||status === '3' ||status === '9'){
+          showExpressBtn= true
+        }
+        return showExpressBtn;
+      }
+    };
+    onLoad() {};
+    onShow() {};
+    async handleAction(param,text){
+      let res = await api.getOrderList({
+        query: {
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code===0){
+        this.$emit('refresh-list')
+        return tip.toast({
+          title: res.msg || `${text}成功`,
+          icon: 'none'
+        })
+      }else{
+        return tip.toast({
+          title: res.msg || '订单操作异常',
+          icon: 'none'
+        })
+      }
+    }
+    async payment(param) {
+      let res = await api.getGoodsDetail({
+        query: {
+          method:'WeixinPay',
+          ...param
+        },
+        realUrl: true
+      })
+      if(res.code ===0){
+        let data = res.data;
+        if(!data || !data.PaySign){
+          return tip.error('获取支付信息异常')
+        }
+        wx.requestPayment({
+          timeStamp: data.TimeStamp,
+          nonceStr: data.NonceStr,
+          package: data.Package,
+          signType: data.SignType,
+          paySign: data.PaySign,
+          success:(r)=> {
+            console.log('支付',r)
+            tip.success('支付成功')
+            let store = getStore();
+            store.dispatch({
+              type: UPDATE_CARL_STATUS,
+              cartIsUpDate: true
+            });
+          },
+          fail:(err)=> {
+            console.log('支付err',err)
+            // tip.error(res.msg)
+            }
+        })
+      }
+      else{
+        tip.error(res.msg)
+      }
+      
+    }
+    updateRateList(order){
+      const orderId = order.orderId;
+      let store = getStore();
+      let rateOrderList = [];
+      let url = '';
+      let data = order.detail;
+      if(data && data.length>0){
+        data.forEach(element => {
+          let opt = Object.assign({},element,{orderId:orderId});
+          rateOrderList.push(opt);
+        });
+        url = `/pages/rate-list`
+        if(rateOrderList.length>1){
+          store.dispatch({
+            type:UPDATE_RATE_ORDER_LIST,
+            rateOrderList:rateOrderList
+          })
+          url = `/pages/rate-list`
+        }else{
+          store.dispatch({
+            type:UPDATE_RATE_INFO,
+            rateInfo:rateOrderList[0]
+          })
+          url = `/pages/rate?type=0`
+        }
+        wepy.navigateTo({ url: url });
+      }else{
+        return tip.error('该订单商品信息异常')
+      }
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .item-box {
+    margin-top: 20rpx;
+    // margin-bottom: 60rpx;
+    background-color: @bg-white;
+    .title {
+      border-bottom: 1px solid @bg-gray;
+      padding: 20rpx;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      .status {
+        color: @color-major;
+      }
+    }
+    .goods-container{
+      padding: 0 26rpx;
+      .goods-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 26rpx;
+        padding-top: 26rpx;
+        border-top: 1px solid @bg-gray;
+        &:first-child{
+          border: none;
+        }
+        .goods-item {
+          &:nth-child(2){
+            flex: 0 1 450rpx;
+          }
+          .logo {
+            width: 120rpx;
+            height: 80rpx;
+          }
+          .tags{
+            margin-top: 16rpx;
+            .tag{
+              margin-left: 10rpx;
+              color: @color-9;
+              &:first-child{
+                margin-left: 0;
+              }
+            }
+          }
+          .price{
+            position: relative;
+            .sup{
+              font-size: 16rpx;
+              position:absolute;
+              top: -4rpx;
+              left: -16rpx;
+            }
+          }
+          .num{
+            text-align: right;
+            margin-top: 16rpx;
+          }
+        }
+      }
+    }
+    .footer{
+      border-top: 1px solid @bg-gray;
+      position: relative;
+      .icon-xiangshangjiantou{
+        color: @bg-gray;
+        width: 32rpx;
+        height: 32rpx;
+        font-size: 32rpx;
+        background-color: #fff;
+        position:absolute;
+        top: -18rpx;
+        right: 26rpx;
+      }
+      .foot-info{
+        padding: 26rpx;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        .price{
+          position: relative;
+          margin-left: 46rpx;
+          .sup{
+            font-size: 16rpx;
+            position:absolute;
+            top: -4rpx;
+            left: -16rpx;
+          }
+        }
+      }
+    }
+    .btn-container{
+      // margin-top: 20rpx;
+      text-align: right;
+      // padding: 20rpx 26rpx 26rpx;
+      background-color: @bg-white;
+      .btn{
+        height: 72rpx;
+        line-height: 72rpx;
+        display: inline-block;
+        color: @color-9;
+        border-radius: 6rpx;
+        margin: 20rpx 26rpx 26rpx 0;
+        &.btn-red{
+          color: @color-white;
+        }
+      }
+    }
+  }
+</style>

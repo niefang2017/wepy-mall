@@ -1,0 +1,365 @@
+<!-- cart-list 购物车列表组件 -->
+<template>
+  <repeat for="{{list}}" key="index" index="index" item="item">
+    <view class="goods-box">
+      <swipedelete :swipeData="item" @delItem.user="handleDelItem">
+        <view class="goods-info">
+          <icon class="icon-check" type="success" color="{{item.isChecked?'red':'rgb(153,153,153)'}}" @tap.stop="selectTap" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}" size="20"></icon>
+          <view class="img-box" @tap="goDetail({{item.FMATERIALID}})">
+            <image src="{{item.FPic}}" class="img" lazy-load="true"></image>
+          </view>
+          <view class="text-box">
+            <view class="goods-title" @tap="goDetail({{item.FMATERIALID}})">
+              {{item.FNAME}}
+            </view>
+            <!--  -->
+            <view class="lable" @tap="goDetail({{item.FMATERIALID}})">
+              <view class="goods-lable" wx:for="{{item.FAUXPROPID}}" wx:for-index="idx" wx:for-item="sku" wx:key="j">{{sku}}</view>
+            </view>
+            <view class="goods-price" @tap="goDetail({{item.FMATERIALID}})">¥ {{item.FPRICE}}</view>
+            <view class="buy-num">
+              <view class="jian-btn {{item.FCOUNT==1? 'disabled' : ''}}" @tap.stop="jianBtnTap" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}">-</view>
+              <input type="number"  value="{{item.FCOUNT}}" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}" disabled/>
+              <view class="jia-btn {{item.FCOUNT>=item.maxLen? 'disabled' : ''}}" @tap.stop="jiaBtnTap" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}">+</view>
+            </view>
+          </view>
+        </view>
+      </swipedelete>
+    </view>
+  </repeat>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import SwipeDelete from './common/wepy-swipe-delete';
+  import {
+    UPDATE_CART_LIST
+  } from '@/store/types/goods'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Cartlist extends wepy.component {
+    props = {
+      list: []
+    };
+    data = {
+      totalPrice:0,
+      allChecked:false,
+      noSelect: false
+    };
+    components = {
+      swipedelete: SwipeDelete
+    };
+    methods = {
+      handleDelItem(itemData) {
+        this.deleteGoods(itemData);
+      },
+      goDetail(id){
+        wepy.navigateTo({ url: `/pages/course-detail?id=${id}` });
+      },
+      selectTap(e) {
+        let id = e.currentTarget.dataset.id;
+        let index = parseInt(e.currentTarget.dataset.index);
+        let isChecked = this.list[index].isChecked;
+        // this.$emit('change-list',this.list)
+        this.checkGoods(id, index, isChecked);
+      },
+      jianBtnTap(e) {
+        if (this.operating) {
+          return;
+        }
+        this.operating = true;
+        let id = e.currentTarget.dataset.id;
+        let index = parseInt(e.currentTarget.dataset.index);
+        let num = this.list[index].FCOUNT;
+        // 如果只有1件了，就不允许再减了
+        if (num > 1) {
+          num--;
+        } else {
+          return;
+        }
+        this.$apply();
+        // tip.loading('加载中...');
+        clearTimeout(timeId);
+        let timeId = setTimeout(()=>{
+          this.cartUpdateNum(id, num, index,'reduce');
+        },300)
+      },
+      jiaBtnTap(e) {
+        if (this.operating) {
+          return;
+        }
+        this.operating = true;
+        let id = e.currentTarget.dataset.id;
+        let index = parseInt(e.currentTarget.dataset.index);
+        console.log('==',this.list,index)
+        let num = this.list[index].FCOUNT;
+        if (num>=this.list[index].maxLen) return
+        // 自增
+        num++;
+        console.log('+++num==',num)
+        // tip.loading('加载中...');
+        this.$apply();
+        clearTimeout(timeId);
+        let timeId = setTimeout(()=>{
+          this.cartUpdateNum(id, num, index,'add');
+        },300)
+      }
+    };
+    events = {
+      'all-check':(...args)=>{
+        this.checkAllGoods();
+      },
+      'to-pay': (...args)=>{
+        this.toPayOrder();
+      }
+    };
+    watch = {
+      totalPrice(n,o){
+        console.log('jj',n)
+        this.$emit('change-total-price',n)
+      },
+      list(n,o){
+        this.$emit('change-list',n)
+      },
+      allChecked(n,o){
+        this.$emit('change-check',n)
+      }
+    };
+    computed = {};
+    onLoad() {};
+    onShow() {};
+    async deleteGoods(itemData) {
+      let id = itemData.FSHOPPINGCARTID;
+      console.log('id',itemData,id)
+      let res = await api.buyCarServer({
+        query: {
+          method:'RemoveFromCar',
+          carIds:id
+        },
+        realUrl: true
+      })
+      if(res.code ===0){
+        // this.myCartList = res.data; 
+        let retList = [];
+        for (let i = 0; i < this.list.length; i++) {
+          if (this.list[i].FSHOPPINGCARTID == id) {
+            if (this.list[i].isChecked) {
+              this.totalPrice -= parseInt(this.list[i].FPRICE*this.list[i].FCOUNT);
+            }
+            continue;
+          } else {
+            retList.push(this.list[i]);
+          }
+        }
+        this.list = retList;
+        this.$apply();
+      }else{
+        tip.error(res.msg)
+        // return tip.toast({
+        //   title: res.msg || '删除购物车异常',
+        //   icon: 'none'
+        // })
+      }
+    }
+    async checkGoods(id, index, isChecked) {
+      this.list[index].isChecked = !isChecked;
+      let currentItem = this.list[index];
+      let count = 0;
+      this.list.forEach(element=>{
+        if(element.isChecked){
+          count++
+        }
+      })
+      if(count ===this.list.length){
+        this.allChecked = true
+      }else{
+        this.allChecked = false
+      }
+      this.$apply();
+    }
+    async checkAllGoods() {
+      for (let i = 0; i < this.list.length; i++) {
+        let currentItem = this.list[i]
+        currentItem.isChecked = !this.allChecked;
+      }
+      this.allChecked = !this.allChecked;
+      this.$apply();
+    }
+    async cartUpdateNum(id, num, index,type) {
+      tip.loading('更新中')
+      const res = await api.buyCarServer({
+        query: {
+          method: 'ModifyCar',
+          carId:id,
+          count:num
+        },
+        realUrl: true
+      });
+      // tip.loaded();
+      if (res.code === 0) {
+        // 购物车数据
+        tip.loaded();
+        this.list[index].isChecked = true;
+        this.list[index].FCOUNT = num;
+        console.log('num',num)
+        let currentItem = this.list[index];
+        this.operating = false;
+      } else {
+        tip.error(res.msg)
+      }
+      this.$apply();
+    }
+    async toPayOrder() {
+      let param=[];
+      let cartList = [];
+      let list = this.list;
+      list.forEach(element=>{
+        if(element.isChecked){
+          let opt ={
+            id:element.id,
+            num:element.FCOUNT
+          }
+          cartList.push(element)
+          param.push(opt)
+        }
+      })
+      let store = getStore();
+      store.dispatch({
+        type: UPDATE_CART_LIST,
+        cartList: cartList
+      });
+      wepy.navigateTo({ url: `/pages/order-pay?type=1` });
+      
+    }
+  }
+</script>
+
+<style lang='less'>
+.goods-box{
+  position: relative;
+  height: 225rpx;
+}
+.goods-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 30rpx 0;
+    box-sizing: border-box;
+    align-items: center;
+    position: relative;
+    .icon-check {
+      // position: absolute;
+      text-align: center;
+      width: 100rpx;
+      height: 165rpx;
+      line-height: 165rpx;
+    }
+    .img-box {
+      width: 160rpx;
+      height: 160rpx;
+      overflow: hidden;
+      margin-right: 20rpx;
+      background-color: #d8d8d8;
+      margin-left: 18rpx;
+    }
+    .text-box {
+      width: 440rpx;
+      position: relative;
+      .goods-title {
+        font-size: 28rpx;
+        color: #000;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        padding: 10rpx 20rpx 5rpx 0;
+      }
+      .lable {
+        font-size: 26rpx;
+        color: #999;
+        height: 38rpx;
+        line-height: 38rpx;
+        margin: 8rpx 0 25rpx 0;
+        display: flex;
+        align-items: center;
+        .goods-label {
+          font-size: 26rpx;
+        }
+        .goods-lable {
+          font-size: 26rpx
+        }
+        .bo-label {
+          font-size: 24rpx;
+          background: #e64340;
+          padding: 2rpx 10rpx;
+          color:#fff;
+          border-radius: 2rpx;
+          margin-left: 10rpx;
+
+        }
+      }
+      .goods-price {
+        font-size: 26rpx;
+        color: #e64340;
+      }
+      .buy-num {
+        width: 164rpx;
+        height: 48rpx;
+        line-height: 48rpx;
+        position: absolute;
+        right: 30rpx;
+        bottom: 0;
+        display: flex;
+        /*justify-content: space-between;*/
+        font-size: 24rpx;
+        text-align: center;
+        .jian-btn {
+          width: 48rpx;
+          height: 100%;
+          border-left: 1rpx solid #ccc;
+          border-bottom: 1rpx solid #ccc;
+          border-top: 1rpx solid #ccc;
+          border-bottom-left-radius: 6rpx;
+          border-top-left-radius: 6rpx;
+        }
+        .jian-btn.disabled {
+          background-color: #f5f5f9;
+          border-left: 1rpx solid #eee;
+          border-bottom: 1rpx solid #eee;
+          border-top: 1rpx solid #eee;
+          color: #ccc;
+        }
+        .jia-btn {
+          width: 48rpx;
+          height: 100%;
+          border-right: 1rpx solid #ccc;
+          border-bottom: 1rpx solid #ccc;
+          border-top: 1rpx solid #ccc;
+          border-bottom-right-radius: 6rpx;
+          border-top-right-radius: 6rpx;
+        }
+        .jia-btn.disabled {
+          background-color: #f5f5f9;
+          border-right: 1rpx solid #eee;
+          border-bottom: 1rpx solid #eee;
+          border-top: 1rpx solid #eee;
+          color: #ccc;
+        }
+        input {
+          width: 68rpx;
+          height: 48rpx;
+          min-height: 48rpx;
+          text-align: center;
+          font-size: 24rpx;
+          border: 1rpx solid #ccc;
+        }
+      }
+    }
+    .img-box .img {
+      width: 160rpx;
+      height: 160rpx;
+    }
+  }
+  
+</style>

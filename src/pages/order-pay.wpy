@@ -1,0 +1,692 @@
+<!-- order-pay 用户结算 -->
+<template>
+  <view class='order-container'>
+    <view class="row" wx:if="{{payType === 0 && orderInfo.isVirtualProduct==='0'}}">
+      <view class="h3 sub-title">收货地址</view>
+      <view class="addr-info" @tap="openAddr">
+        <view class="item">
+          <view class="h4" wx:if="{{addressInfo.userName}}">{{addressInfo.telNumber}} {{addressInfo.userName}}  收</view>
+          <view class="h4"  wx:if="{{addressInfo.userName}}">{{addressInfo.provinceName}}{{ addressInfo.cityName }} {{addressInfo.countyName}} {{ addressInfo.userName }} {{addressInfo.detailInfo}}</view>
+          <view class="h4 gray" wx:else>请选择</view>
+        </view>
+        <i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+    </view>
+    <view class="row" wx:if="{{payType === 1 && orderInfo.isVirtualProduct==='0'}}">
+      <view class="h3 sub-title">收货地址</view>
+      <view class="addr-info" @tap="openAddr">
+        <view class="item">
+          <view class="h4" wx:if="{{addressInfo.userName}}">{{addressInfo.telNumber}} {{addressInfo.userName}}  收</view>
+          <view class="h4"  wx:if="{{addressInfo.userName}}">{{addressInfo.provinceName}}{{ addressInfo.cityName }} {{addressInfo.countyName}} {{ addressInfo.userName }} {{addressInfo.detailInfo}}</view>
+          <view class="h4 gray" wx:else>请选择</view>
+        </view>
+        <i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+    </view>
+    <view class="row">
+      <view class="h3 sub-title">已选学员</view>
+      <view class="addr-info" @tap="chooseStudents">
+        <view class="item">
+          <view class="h4" wx:if="{{studentInfo.FNAME}}">{{studentInfo.FNAME}} {{studentInfo.FPhone}}</view>
+          <view class="h4 gray" wx:else>请选择</view>
+        </view>
+        <i class="iconfont icon-xiangyoujiantou"></i>
+      </view>
+    </view>
+    <view class="row">
+      <view class="h3 sub-title">购物清单</view>
+      <view class="list" wx:if="{{payType === 1 && cartList}}">
+        <repeat for="{{cartList}}" key="index" index="index" item="item">
+            <view class="item">
+              <view class="item-left">
+                <image src="{{item.FPic}}" mode="aspectFit"></image>
+              </view>
+              <view class="h5 text">
+                <text>{{item.FNAME}}</text>
+                <text>{{item.FSEX}}</text>
+                <!-- <repeat for="{{item.goodsSkuValName}}" key="jIdx" index="jIdx" item="j">
+                    <text>{{j}}</text>
+                </repeat> -->
+
+              </view>
+              <view class="h5 num">{{item.FCOUNT}} x <text class="price">{{item.FPRICE}}元</text></view>
+            </view>
+        </repeat>
+      </view>
+      <view class="list" wx:if="{{payType === 0 && orderInfo}}">
+        <view class="item">
+          <view class="item-left">
+            <image src="{{orderInfo.BuyImage}}" mode="aspectFit"></image>
+          </view>
+          <view class="h5 text">
+            <text>{{orderInfo.Chinese}}</text>
+            <text>{{orderInfo.FSEX}}</text>
+            <repeat for="{{orderInfo.chooseSkuNames}}" key="jIdx" index="jIdx" item="j">
+                <text>{{j}}</text>
+            </repeat>
+
+          </view>
+          <view class="h5 num">{{orderInfo.count}} x <text class="price">{{orderInfo.skuInfo.price}}元</text></view>
+        </view>
+      </view>
+    </view>
+    <view class="row" wx:if="{{couponList.length>0}}">
+      <view class="h3 sub-title">优惠券</view>
+      <picker bindchange="bindPickerChange" name="coupon" value="{{couponIndex}}" range-key="fullName" range="{{couponList}}">
+          <view class="picker h5">
+            <view>{{couponList[couponIndex].name}}</view>
+            <view class="price">{{couponList[couponIndex].price}}元</view>
+          </view>
+        </picker>
+      <!-- <view class="addr-info">
+        <view class="item">
+          <view class="h4">没有选择优惠券</view>
+        </view>
+        <i class="iconfont icon-xiangyoujiantou"></i>
+      </view> -->
+      
+      <!-- <view class="coupon-container">
+        <couponlist :list.sync="couponList"></couponlist>
+        
+      </view> -->
+    </view>
+    <view class="row">
+      <view class="nav">
+        <view class="price-info">
+          <view class="h3 sub-title">订单金额</view>
+          <view class="h4">应付 <text class="price">{{payType===1?countPrices-couponPrice:countBuyPrices-couponPrice}}元</text></view>
+        </view>
+      </view>
+      <view class="price-info h4">
+        <view class="sub-title">商品总价</view>
+        <view class="price">{{payType===1?countPrices:countBuyPrices}}元</view>
+      </view>
+      <!-- <view class="price-info h4">
+        <view class="sub-title">邮费</view>
+        <view class="price">{{postage}}元</view>
+      </view> -->
+      <view class="price-info h4">
+        <view class="sub-title">开具发票</view>
+        <view class="price">
+          <switch checked="{{switchChecked}}" type="switch" color="#ff6a3c" @change="switchChange" />
+        </view>
+      </view>
+      <view class="price-info h4" wx:if="{{switchChecked}}">
+        <view class="sub-title">个人姓名</view>
+        <view class="price">
+          <input value="{{invoiceName}}" type="text" name="invoiceName" placeholder="请输入个人姓名" placeholder-class="placeholder" maxlength="20" data-type="invoiceName" @input="handleInput" @blur="vailName"/> 
+        </view>
+      </view>
+      <view class="price-info h4" wx:if="{{switchChecked}}">
+        <view class="sub-title">个人身份证</view>
+        <view class="price">
+          <input value="{{cardId}}" type="text" name="cardId" placeholder="请输入身份证号码" placeholder-class="placeholder" maxlength="18" data-type="cardId" @input="handleInput" @blur="vailCardId"/> 
+        </view>
+      </view>
+    </view>
+    <button class="btn btn-red" @tap="goPay">提交订单</button>
+    <zanToptips/>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import util from '@/utils/util';
+  import zanToptips from '@/components/common/zan-toptips'
+  import CouponList from '@/components/coupon-list';
+  import {
+    UPDATE_CARL_STATUS
+  } from '@/store/types/goods'
+  import {
+    getStore,
+    connect
+  } from 'wepy-redux';
+  @connect({
+    cartList(state) {
+      return state.goods.cartList
+    },
+    orderInfo(state) {
+      return state.goods.orderInfo
+    },
+    countPrices(state) {
+      let cartList = state.goods.cartList;
+      let total=0;
+      if(cartList.length>0){
+        cartList.forEach(obj=>{
+          total+=Number(obj.FPRICE)*Number(obj.FCOUNT);
+        })
+      }
+      return total;
+    },
+    countBuyPrices(state) {
+      let orderInfo = state.goods.orderInfo;
+      let total = 0;
+      if(Object.keys(orderInfo).length>0){
+        total = Number(orderInfo.skuInfo.price)*orderInfo.count;
+        return total;
+      }
+    }
+  })
+  export default class Comfireorder extends wepy.page {
+    config = {
+      navigationBarTitleText: "用户结算",
+    };
+
+    data = {
+      orderId:'',
+      list:[],
+      addressInfo:{},
+      openSettingStatus:false,
+      countPrice:0,
+      postage:0,
+      couponList:[],
+      couponIndex:0,
+      couponPrice:0,
+      chooseCouponId:null,
+      studentInfo:{},
+      payType:null,
+      switchChecked:false,
+      invoiceName:'',
+      cardId:''
+    };
+
+    components = {
+      couponlist: CouponList,
+      zanToptips
+    };
+
+    methods = {
+      openAddr(e) {
+        let that = this;
+        wx.chooseAddress({
+          success: (res) => {
+            this.addressInfo=res;
+            wepy.setStorageSync('addressInfo',res);
+            this.openSettingStatus=false
+            this.$apply();
+          },
+          fail: (err) => {
+            this.openSettingStatus = true;
+            this.$apply();
+          }
+        })
+        console.log('this',this.addressInfo)
+      },
+      chooseStudents(){
+        wepy.navigateTo({ url: '/pages/mine-list?type=1' });
+      },
+      goPay(){
+        const payType = this.payType;
+        let param={};
+        let store = getStore();
+        let addressInfo = this.addressInfo;
+        let studentInfo = this.studentInfo;
+        let address = addressInfo?addressInfo.provinceName+addressInfo.cityName+addressInfo.countyName+addressInfo.detailInfo:'';
+        
+        let switchChecked = this.switchChecked;
+        let invoiceName = this.invoiceName;
+        let cardId = this.cardId;
+        if(!studentInfo || !studentInfo.FSTUDENTID){
+          return tip.toast({
+            title: '请选择学员',
+            icon: 'none'
+          })
+        }
+        if(payType===1){
+          // 购物车提交订单
+          let cartList = store.getState().goods.cartList;
+          let isVirtualProduct =null;
+          if(cartList && cartList.length>0){
+            cartList.forEach(ele=>{
+              if(ele.isVirtualProduct==='0'){
+                isVirtualProduct= true
+              }
+            })
+          }
+          if(cartList && isVirtualProduct && !addressInfo && !addressInfo.telNumber){
+            return tip.toast({
+              title: '请选择收货地址',
+              icon: 'none'
+            })
+          }
+          let skuInfo = this.filterSku(cartList);
+          if(isVirtualProduct){
+            param = Object.assign({},{'detail':skuInfo},{'FSTUDENTID':studentInfo.FSTUDENTID},{'recipients':addressInfo.userName,'phone':addressInfo.telNumber,'address':address}) 
+          }else{
+            param = Object.assign({},{'detail':skuInfo},{'FSTUDENTID':studentInfo.FSTUDENTID}) 
+          }
+          
+          param.invoice=false;
+          if(switchChecked){
+            if(!util.vailName(invoiceName)){
+              return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的姓名', options: 2000 })
+            }
+            else if(!util.vailCardId(cardId)){
+              return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的身份证号', options: 2000 })
+            }
+            else{
+              param = Object.assign({},param,{cardId:cardId,invoiceName:invoiceName,invoice:true})
+            }
+          }
+          console.log('订单',param)
+          this.submitOrder(param)
+        }else{
+          // 立即购买提交订单
+          let orderInfo = store.getState().goods.orderInfo;
+          let orderAddr = {}
+          if(orderInfo.isVirtualProduct === '0' && !addressInfo && !addressInfo.telNumber){
+            return tip.toast({
+              title: '请选择收货地址',
+              icon: 'none'
+            })
+          }else{
+            orderAddr = {'recipients':addressInfo.userName,'phone':addressInfo.telNumber,'address':address}
+          }
+          param = Object.assign({},{'count':orderInfo.count,'FSTUDENTID':studentInfo.FSTUDENTID},orderAddr) 
+          param.invoice=false;
+          if(switchChecked){
+            if(!util.vailName(invoiceName)){
+              return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的姓名', options: 2000 })
+            }
+            else if(!util.vailCardId(cardId)){
+              return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的身份证号', options: 2000 })
+            }
+            else{
+              param = Object.assign({},param,{cardId:cardId,invoiceName:invoiceName,invoice:true})
+            }
+          }
+          if(orderInfo.oldOrderId){
+            this.submitTransform(param,orderInfo.oldOrderId)
+          }else{
+            this.submitbBuyOrder(param)
+          }
+
+        }
+        return
+      },
+      bindPickerChange(e){
+        let index = e.detail.value;
+        this.couponIndex = index;
+        this.chooseCouponId = this.couponList[index].id;
+        this.couponPrice = this.couponList[index].price;
+      },
+      handleInput(e){
+        const {type} = e.currentTarget.dataset;
+        const value = e.detail.value;
+        this[type]=value;
+        console.log('e',this.invoiceName,this.cardId)
+      },
+      vailName(e){
+        const value = e.detail.value;
+        if(!util.vailName(value)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的姓名', options: 2000 })
+        }else{
+          return true
+        }
+      },
+      vailCardId(e){
+        const value = e.detail.value;
+        if(!util.vailCardId(value)){
+          return this.$invoke('zanToptips', 'showZanTopTips', { content: '请输入正确的身份证号', options: 2000 })
+        }else{
+          return true
+        }
+      },
+      switchChange(e){
+        const value = e.detail.value;
+        console.log('value',value)
+        this.switchChecked = value;
+        if(!value){
+          this.invoiceName=null;
+          this.cardId=null;
+        }
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    async onLoad(e) {
+      const {type} =e;
+      // type: 0立即支付和1购物车结算
+      this.payType = Number(type);
+      let addressInfo = wepy.getStorageSync('addressInfo');
+      this.addressInfo = addressInfo;
+      this.$apply();
+      // await this.getOrderInfo(orderId)
+      // await this.getCouponList(orderId)
+    };
+
+    onShow() {
+      let studentInfo = wepy.getStorageSync('studentInfo');
+      let store = getStore();
+      let studentInfoStore = store.getState().goods.studentInfo;
+      if (Object.keys(studentInfoStore).length>0 && studentInfoStore.id){
+        studentInfo.FNAME=studentInfoStore.name;
+        studentInfo.FNAMEEN=studentInfoStore.englishName;
+        studentInfo.FSEX=studentInfoStore.sex;
+        studentInfo.FLiveArea=studentInfoStore.liveArea;
+        studentInfo.FPhone=studentInfoStore.myPhone;
+        studentInfo.FMotherPhone=studentInfoStore.motherPhone;
+        studentInfo.FFatherPhone=studentInfoStore.fatherPhone;
+        studentInfo.FClassArea=studentInfoStore.classArea;
+        studentInfo.FSTUDENTID=studentInfoStore.id;
+        this.studentInfo = studentInfo;
+      }
+    };
+    async getOrderInfo(orderId){
+      let res = await api.getOrderInfo({
+        query:{
+          orderId:orderId
+        }
+      })
+      if(res.code===0){
+        this.list = res.data
+        let countPrice = 0;
+        res.data.forEach(element =>{
+          countPrice+=element.price*element.num
+        })
+        this.countPrice = countPrice;
+        this.$apply();
+      }else{
+        tip.error(res.msg)
+      }
+    };
+    async getCouponList(orderId){
+      let res = await api.getCouponList({
+        query:{
+          orderId:orderId
+        }
+      })
+      if(res.code===0){
+        res.data.forEach(element=>{
+          element.fullName = `${element.name} ${element.price}元`
+        })
+        this.couponList = res.data;
+        this.chooseCouponId = this.couponList[0].id;
+        this.couponPrice = this.couponList[0].price;
+        this.$apply();
+      }else{
+        tip.error(res.msg)
+      }
+    };
+    async submitOrder(param){
+      // 测试支付
+
+      // this.payment({'orderId':'12795'});
+      // return
+      // 
+      let res = await api.cartSubmitOrder({
+        query: {
+          ...param
+        },
+        method: 'POST',
+        realUrl: true
+      })
+      if(res.code ===0){
+        let data = res.data;
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_CARL_STATUS,
+          cartIsUpDate: true
+        });
+        this.payment(data);
+      }
+      else{
+        tip.error(res.msg||'生成订单异常')
+      }
+    };
+    async submitbBuyOrder(param){
+      // 立即支付提交订单
+      let res = await api.submitbBuyOrder({
+        query: {
+          method:'SubmitToOrder',
+          ...param
+        },
+        method: 'POST',
+        realUrl: true
+      })
+      if(res.code ===0){
+        let data = res.data;
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_CARL_STATUS,
+          cartIsUpDate: true
+        });
+        this.payment(data);
+        
+      }
+      else{
+        tip.error(res.msg||'生成订单异常')
+      }
+    };
+    async payment(param){
+      let res = await api.getGoodsDetail({
+        query: {
+          method:'WeixinPay',
+          ...param
+        },
+        realUrl: true
+      })
+      if (res.code ===1){
+        // 不需要支付
+        tip.success('转班成功')
+        wepy.redirectTo({ url: `/pages/course-list` });
+      }
+      else if(res.code ===0){
+        let data = res.data;
+        if(!data || !data.PaySign){
+          return tip.error('获取支付信息异常')
+        }
+        
+        wx.requestPayment({
+          timeStamp: data.TimeStamp,
+          nonceStr: data.NonceStr,
+          package: data.Package,
+          signType: data.SignType,
+          paySign: data.PaySign,
+          success:(r)=> {
+            console.log('支付',r)
+            tip.success('支付成功')
+            wepy.redirectTo({ url: `/pages/pay-result?type=1&text=` });
+            
+            },
+          fail:(err)=> {
+            console.log('支付err',err)
+            let text = err.err_desc?err.err_desc:''
+            wepy.redirectTo({ url: `/pages/pay-result?type=0&text=${text}` });
+            // if(err.err_desc){
+            //   return tip.error(err.err_desc)
+            // }
+            // tip.error(res.msg)
+            }
+        })
+      }
+      else{
+        tip.error(res.msg)
+      }
+    }
+    filterSku(list){
+      let skuInfo = {}
+      list.forEach(ele=>{
+        skuInfo[ele.FSHOPPINGCARTID]=ele.FCOUNT
+      })
+      return skuInfo
+    };
+    // 转班
+    async submitTransform(param,oldOrderId){
+      let res = await api.transformClass({
+        query: {
+          ...param
+        },
+        method: 'POST',
+        realUrl: true,
+        other: `&oldOrderId=${oldOrderId}`
+      })
+      if(res.code ===0){
+        let data = res.data;
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_CARL_STATUS,
+          cartIsUpDate: true
+        });
+        this.payment(data);
+        
+      }
+      else{
+        tip.error(res.msg||'生成订单异常')
+      }
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+.order-container{
+  position: relative;
+  padding-bottom: 120rpx;
+  .row{
+    margin-top: 20rpx;
+    background-color: @bg-white;
+    >.sub-title{
+      padding: 26rpx;
+      border-bottom: 1px solid @bg-gray;
+    }
+    .list{
+      margin: 0 26rpx;
+      .item{
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-top: 1px solid @bg-gray;
+        padding: 26rpx 0;
+        &:first-child{
+          border-top: none;
+        }
+        .item-left{
+          width: 80rpx;
+          image{
+            width: 80rpx;
+            height: 80rpx;
+          }
+        }
+        .text{
+          // display: inline-block;
+          width: 480rpx;
+          padding-left: 26rpx;
+          text{
+            margin-left: 10rpx;
+            line-height: 1.4;
+            &:first-child{
+              margin-left: 0;
+            }
+          }
+        }
+        .num{
+          width: 160rpx;
+          padding-left: 10rpx;
+          text-align: right;
+          .price{
+            color: @color-major;
+          }
+        }
+        
+        
+      }
+    }
+    .addr-info{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 26rpx;
+      .item{
+        view{
+          line-height: 1.4;
+        }
+        .gray{
+          color: @color-gray;
+        }
+      }
+    }
+    .nav{
+      padding: 26rpx;
+      border-bottom: 1px solid @bg-gray;
+      .price-info{
+        padding: 0;
+        border: none;
+      }
+    }
+    .price-info{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 26rpx 0;
+      border-bottom: 1px solid @bg-gray;
+      margin: 0 26rpx;
+      &:first-child{
+        margin: 0 auto;
+      }
+      &:last-child{
+        border:none;
+      }
+      .sub-title{
+        padding: 0;
+      }
+      .price{
+        color: @color-major;
+        input{
+          width:540rpx;
+          text-align: right;
+          color: #222;
+        }
+      }
+      /*swtich整体大小及背景色*/
+      .wx-switch-input{
+        width: 80rpx !important;
+        height:40rpx !important;
+        background: @color-major !important;
+        border: @color-major !important;
+      }
+      .wx-switch-input::before{
+        width:80rpx !important;
+        height: 40rpx !important;
+      }
+      .wx-switch-input::after{
+        width: 40rpx !important;
+        height: 40rpx !important;
+      }
+    }
+  }
+  .btn{
+    width: 100%;
+    height: 100rpx;
+    line-height: 100rpx;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    z-index: 999;
+    border-radius: 0;
+  }
+  .btn-red{
+    background-color: @color-default;
+  }
+  .coupon-container{
+    margin-top: 20rpx;
+    background-color: @bg-white;
+  }
+  .picker{
+    padding: 26rpx;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    .price{
+      color: @color-major;
+    }
+  }
+}
+</style>

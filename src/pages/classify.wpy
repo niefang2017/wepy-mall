@@ -1,0 +1,187 @@
+<!-- classify 分类 -->
+<template>
+  <view class='classify-container'>
+    <view class="classify-scroll">
+      <scroll-view class="classify-left" scroll-y scroll-with-animation="true" style="height:{{windowHeight}}px">
+        <repeat for="{{categoryList}}" key="index" index="index" item="item">
+          <view class="name {{roomIdx === index ? 'active':''}}" @tap="changeCate" data-index="{{index}}" data-id="{{item.TypeEN}}">
+            {{item.Type}}
+          </view>
+        </repeat>
+      </scroll-view>
+      <scroll-view class="classify-right" scroll-y scroll-with-animation="true" style="height:{{windowHeight}}px">
+        <repeat for="{{categoryList[roomIdx].TypeInfos}}" key="index" index="index" item="item">
+          <view class="child-box">
+            <view class="h4 child-title">{{item.Type}}</view>
+            <view class="children">
+              <repeat for="{{item.Detail}}" key="jIdx" index="jIdx" item="j">
+                <view class="children-item"  @tap="goDetail({{j}})">
+                  <image class="child-image" src="{{j.Icon}}" mode="aspectFit" lazy-load="true"></image>
+                  <view class="child-name">{{j.Name}}</view>
+                </view>
+              </repeat>
+            </view>
+          </view>
+        </repeat>
+      </scroll-view>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import api from '@/api/api';
+  import tip from '@/utils/tip';
+  import {
+    UPDATE_TRANSFORM_CLASS
+  } from '@/store/types/index';
+  import {
+    getStore,
+    connect
+  } from 'wepy-redux';
+  @connect({
+    windowHeight (state) {
+      return state.user.systemInfo.windowHeight
+    }
+  })
+  export default class Classify extends wepy.page {
+    config = {
+      navigationBarTitleText: '分类',
+    };
+
+    data = {
+      roomIdx:0,
+      rootCateList: [],
+      childCateList: [],
+      categoryList:[],
+      transformClassInfo:{}
+    };
+
+    components = {};
+
+    methods = {
+      changeCate(e){
+        const { id, index} = e.currentTarget.dataset
+        this.roomIdx = index;
+      },
+      goDetail(e){
+        let param= {
+          keyword:e.Name,
+          id:e.URL,
+          type:1
+        }
+        let url = `/pages/search?keyword=${param.keyword}&id=${param.id}&type=${param.type}`;
+        let store = getStore();
+        let transformClassInfo = store.getState().goods.transformClassInfo;
+        if (Object.keys(transformClassInfo).length>0){
+          url=url+`&oldOrderId=${transformClassInfo.oldOrderId}`;
+        }
+        wepy.navigateTo({ url: url });
+      }
+    };
+
+    events = {};
+
+    watch = {};
+
+    computed = {};
+
+    onLoad() {};
+    onHide(){
+      let store = getStore();
+      store.dispatch({
+        type: UPDATE_TRANSFORM_CLASS,
+        transformClassInfo: {}
+      });
+    }
+    async onShow() {
+      await this.getCategoryList()
+      let store = getStore();
+      console.log('transformClassInfo;',store.getState().goods.transformClassInfo)
+    };
+    async getCategoryList(){
+      let res = await api.categoryList({
+        query:{
+          method:'GetCategorys'
+        },
+        realUrl: true
+      })
+      if (res.code === 0 && res.data.length >0) {
+        this.categoryList = res.data;
+        this.$apply();
+      }
+      console.log('==GetCategorys',this.categoryList)
+    }
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+.search_read_only .search_content {
+  width: 100%;
+}
+.classify-scroll{
+  display: flex;
+  position: relative;
+  justify-content: flex-start;
+  .classify-left{
+    width : 200rpx;
+    .name {
+      text-align: center;
+      padding:0 10rpx;
+      height: 100rpx;
+      line-height: 100rpx;
+      font-size: 28rpx;
+      color: @color-6;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .active {
+      border-left: 6rpx solid @color-default;
+      background: @bg-white;
+      color: @color-default;
+    }
+  }
+  .classify-right{
+    position: relative;
+    position: relative;
+    z-index: 999;
+    background: @bg-white;
+    .title {
+      font-size: 30rpx;
+      color: @color-3;
+      margin-left: 25rpx;
+    }
+    .child-box{
+      .child-title{
+        color: @color-6;
+        text-align: center;
+        line-height: 80rpx;
+      }
+      .children {
+        padding: 30rpx 10rpx 16rpx 30rpx;
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .child-image {
+        width: 60px;
+        height: 60px;
+      }
+      .child-name {
+        font-size: 26rpx;
+        color: @color-6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 170rpx;
+      }
+      .children-item {
+        height: 200rpx;
+        width: 170rpx;
+        text-align: center;
+      }
+    }
+  }
+}
+</style>

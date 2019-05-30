@@ -1,0 +1,194 @@
+<!-- course-item 订单item -->
+<template>
+  <view class='item-box' @tap.stop="goOrderDetail(3)">
+    <view class="title">
+      <view>{{course.product}} {{weeks[course.week]}} {{course.times}}</view>
+      <text class="status">{{course.isPayed?'已支付':'待支付'}}{{status[course.payStatus]}}</text>
+    </view>
+    <view class="course-row h4">
+      <div class="col-sm"><image class="logo" mode="aspectFit" src="{{course.Icon}}" lazy-load="true"></image></div>
+      <div class="col-sm">
+        <view class="course-row h4">
+          <div class="col-sm"><text class="label">地点</text>{{course.classAddressName}}</div>
+        </view>
+        <view class="course-row h4">
+          <div class="col-sm"><text class="label">年龄段</text>
+            <repeat for="{{course.ages}}" key="index" index="index" item="item">
+              {{index>0?'-':''}}{{item.name}}
+            </repeat>
+          </div>
+          <div class="col-sm"><text class="label">主教练</text>{{course.headCoachName}}</div>
+        </view>
+        <view class="course-row h4">
+          <div class="col-sm" style="margin-bottom:0;"><text class="label">总金额</text><text class="price">￥{{course.allPrice}}</text></div>
+          <div class="col-sm" style="margin-bottom:0;"><text class="label">剩余金额</text><text class="price">￥{{course.remainPrice}}</text></div>
+        </view>
+      </div>
+    </view>
+    <view class="course-row line h4">
+      <div class="col-sm col-4"><text class="label">总课次</text>{{course.allNo}}次</div>
+      <div class="col-sm col-4"><text class="label">已上课次</text>{{course.checkInNo}}次</div>
+      <div class="col-sm col-4"><text class="label">剩余课次</text>{{course.remainNo}}次</div>
+    </view>
+    <view class="course-row line h4">
+      <div class="col-sm col-4" @tap.stop="goOrderDetail(0)"><text class="label">请假次数<text class="badge">{{course.leaveNo}}</text></text></div>
+      <div class="col-sm col-4" @tap.stop="goOrderDetail(1)"><text class="label">补课次数<text class="badge">{{course.makeUpNo}}</text></text></div>
+      <div class="col-sm col-4" @tap.stop="goOrderDetail(2)"><text class="label">取消次数<text class="badge">{{course.cancelNo}}</text></text></div>
+    </view>
+    <view class="btn-grounp" @tap.stop="noTap" wx:if="{{course.isPayed}}">
+      <button class="h4 btn" @tap.stop="transformClass({{course.orderDetailId}})">转班</button>
+    </view>
+    
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  import {
+    UPDATE_TRANSFORM_CLASS
+  } from '@/store/types/index'
+  import {
+    getStore
+  } from 'wepy-redux';
+  export default class Courseitem extends wepy.component {
+    props = {
+      course: {},
+      studentId:String
+    };
+    data = {
+      status: ['待付款', '已付款', '已取消', '已退款'],
+      weeks:{
+        '1':'星期一',
+        '2':'星期二',
+        '3':'星期三',
+        '4':'星期四',
+        '5':'星期五',
+        '6':'星期六',
+        '7':'星期天'
+      }
+    };
+    components = {};
+    methods = {
+      goOrderDetail(type){
+        let {materailId,product} =this.course;
+        let studentId = this.studentId; 
+        const url = `/pages/calendar?id=${materailId}&type=${type}&className=${product}&studentId=${studentId}`
+        wepy.navigateTo({ url: url });
+        
+      },
+      noTap(){
+        return
+      },
+      transformClass(orderId){
+        let info = {
+          oldOrderId:orderId,
+          isTransform:true
+        }
+        let url = `/pages/classify?oldOrderId=${orderId}&type=transform`;
+        let store = getStore();
+        store.dispatch({
+          type: UPDATE_TRANSFORM_CLASS,
+          transformClassInfo: info
+        });
+        wepy.switchTab({ url: url });
+        
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {};
+    onLoad() {};
+    onShow() {};
+  }
+</script>
+
+<style lang='less'>
+  @import "../styles/color";
+  .item-box {
+    margin-top: 20rpx;
+    background-color: @bg-white;
+    .title {
+      border-bottom: 1px solid @bg-gray;
+      padding: 20rpx;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      .status {
+        color: @color-major;
+      }
+    }
+    .course-row{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20rpx;
+      &.line{
+        border-top: 1px solid @bg-gray;
+        &:last-child{
+          background-color: @tag-1;
+          border-bottom: 1px solid @bg-gray;
+        }
+        // background-color: #eee;
+      }
+      .col-sm {
+        &.col-4{
+          flex: 0 1 33.3333333%;
+          text-align: center;
+        }
+        .price{
+          color: @color-major;
+        }
+        i{
+          font-size: 24rpx;
+          color: @color-9;
+        }
+        .course-row{
+          padding: 0;
+          width: 530rpx;
+          .col-sm{
+            margin-bottom: 20rpx;
+          }
+        }
+        .logo{
+          width: 160rpx;
+          height: 160rpx;
+        }
+        .label{
+          margin-right: 16rpx;
+          color: @color-9;
+          position: relative;
+          .badge{
+            position: absolute;
+            top: -4rpx;
+            right: -16rpx;
+            display: inline-block;
+            text-align: center;
+            box-sizing: border-box;
+            padding: 0 6rpx;
+            min-width: 32rpx;
+            line-height: 28rpx;
+            font-size: 20rpx;
+            color: @color-white;
+            border: 1px solid @color-white;
+            border-radius: 32px;
+            background-color: @color-danger;
+            transform: translateX(50%);
+          }
+
+        }
+      }
+    }
+    .btn-grounp{
+      background-color: @bg-primary;
+      text-align: right;
+      padding: 20rpx 20rpx 0;
+      button{
+        display: inline-block;
+        width: 180rpx;
+        line-height: 80rpx;
+        text-align: center;
+        color: @color-gray; 
+      }
+    }
+  }
+</style>

@@ -1,0 +1,85 @@
+<!-- authorization 授权组件 -->
+<template>
+  <view class='auth-flex'>
+    <view class="btn-container">
+      <image class="auth-img" src="{{images[0]}}"></image>
+      <view class="tip">商城申请获取以下权限</view>
+      <view class="ul">
+        <view class="li">· 获取您的公开信息（昵称、头像等）</view>
+      </view>
+      <button open-type="getUserInfo" type="primary" class="btn" lang="zh_CN" bindgetuserinfo="onGotUserInfo">同意</button>
+    </view>
+  </view>
+</template>
+
+<script>
+  import wepy from 'wepy';
+  export default class Authorization extends wepy.component {
+    props = {};
+    data = {
+      images: ['../../static/images/mall.png'],
+      hideAuth: false,
+      systemInfo:{}
+    };
+    components = {};
+    methods = {
+      async onGotUserInfo(e) {
+        if (e.detail.errMsg == 'getUserInfo:ok') {
+          let userInfo = e.detail.userInfo
+          this.$parent.$parent.authLogin(e.detail)
+          wepy.reLaunch({ url: '/pages/index' });
+          
+          // wepy.navigateBack({
+          //   delta: 1 //返回的页面数，如果 delta 大于现有页面数，则返回到首页,
+          // });
+        }
+      }
+    };
+    events = {};
+    watch = {};
+    computed = {};
+    async onLoad() {};
+    onShow() {};
+  }
+</script>
+
+<style lang='less'>
+  .auth-flex {
+    flex: 1;
+    // background-color: rgba(0, 0, 0, 0.4);
+    view {
+      box-sizing: border-box;
+    }
+    .btn-container {
+      background-color: #fff;
+      bottom: 0;
+      padding: 32rpx;
+      width: 100%;
+      .auth-img {
+        width: 200rpx;
+        height: 200rpx;
+        display: block;
+        margin: 0 auto;
+      }
+      .tip {
+        border-top: 1px solid #eee;
+        padding-top: 64rpx; 
+        margin-bottom: 16rpx;
+      }
+      .ul{
+        margin-bottom: 64rpx;
+        .li{
+          font-size: 20rpx;
+          color: #999;
+        }
+      }
+      .btn {
+        color: #fff;
+        background-color: #fe683b;
+        &:after {
+          border: none;
+        }
+      }
+    }
+  }
+</style>
