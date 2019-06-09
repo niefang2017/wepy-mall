@@ -330,12 +330,16 @@
             return currentParent.children[i].select = false;
           }
         })
-        console.log('currentParent，chooseSku',currentParent,chooseSku)
         // return
-        if (Object.keys(chooseSku).length=== this.opts.rules.length){
-          this.getSku(chooseSku)
+        let chooseSkuIds=[]
+        for (let k of Object.keys(chooseSku)) {
+          chooseSkuIds.push(k)
         }
-        // this.$apply();
+        this.getSku(chooseSku,chooseSkuIds)
+        // if (Object.keys(chooseSku).length=== this.opts.rules.length){
+        //   this.getSku(chooseSku)
+        // }
+        this.$apply();
       },
       jiaBtnTap(e) {
         let numbers = this.opts.number;
@@ -519,7 +523,7 @@
         this.$apply();
       }, 100)
     };
-    async getSku(param={}){
+    async getSku(param={},chooseSkuIds){
       let res
       if (Number(param[0])===0){
         res = await api.querySku({
@@ -536,12 +540,20 @@
         })
       }
       if(res.code===0){
-        res.data.store = Number(res.data.store);
+        res.data.store = res.data.store?Number(res.data.store):0;
         this.opts.number = res.data.store;
         this.orderNum = res.data.store===0?0:1;
         this.skuInfo = res.data;
+        let rules = this.opts.rules;
+        let newRules= []
+        if(rules.length>0 && res.data.skulist && res.data.skulist.length>0){
+          newRules=rules.filter((obj,i)=>{
+            return chooseSkuIds.includes(obj.value)
+          })
+          newRules=newRules.concat(res.data.skulist)
+          this.opts.rules=newRules;
+        }
         this.$apply();
-        console.log('this.skuInfo=',this.skuInfo)
       }else{
         return tip.toast({
           title: res.msg || '获取sku信息异常',

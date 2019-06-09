@@ -66,7 +66,7 @@
       <button class="btn h4" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="1" wx:if="{{opts.status === '9'}}">申请退款</button>
       <button class="btn h4" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="2" wx:if="{{opts.status === '9' || opts.status === '8'}}">删除订单</button>
       <button class="btn h4" @tap.stop="goExpress" data-id="{{opts.ExpressNumber}}" data-type="{{opts.ExpressCompany}}" wx:if="{{opts.ExpressNumber && (opts.status === '2' ||opts.status === '3' ||opts.status === '9')}}">查看物流</button>
-      <button class="btn h4" wx:if="{{opts.status === 9}}" @tap.stop="goRate({{opts}})">评价晒单</button>
+      <button class="btn h4" wx:if="{{opts.status === '9'}}" @tap.stop="goRate({{opts}})">评价晒单</button>
       <!-- <button class="btn h4" @tap.stop="goRate({{opts}})">评价晒单</button> -->
       <button class="btn h4 btn-red" @tap.stop="btnEvent" data-id="{{opts.id}}" data-type="100" wx:if="{{opts.status==='1'}}">立即支付</button>
       

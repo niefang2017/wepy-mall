@@ -13,10 +13,10 @@
               {{item.FNAME}}
             </view>
             <!--  -->
-            <view class="lable" @tap="goDetail({{item.FMATERIALID}})">
+            <view class="lable">
               <view class="goods-lable" wx:for="{{item.FAUXPROPID}}" wx:for-index="idx" wx:for-item="sku" wx:key="j">{{sku}}</view>
             </view>
-            <view class="goods-price" @tap="goDetail({{item.FMATERIALID}})">¥ {{item.FPRICE}}</view>
+            <view class="goods-price">¥ {{item.FPRICE}}</view>
             <view class="buy-num">
               <view class="jian-btn {{item.FCOUNT==1? 'disabled' : ''}}" @tap.stop="jianBtnTap" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}">-</view>
               <input type="number"  value="{{item.FCOUNT}}" data-index="{{index}}" data-id="{{item.FSHOPPINGCARTID}}" disabled/>
