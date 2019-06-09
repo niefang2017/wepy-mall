@@ -134,7 +134,6 @@
       };
       // this.getUserInfo();
       this.getSystemInfo();
-      this.updateSessionKey();
     }
     async authLogin(userInfo) {
       let code = store.getState().user.code
@@ -161,37 +160,41 @@
     }
     async getUserInfo(cb) {
       const that = this
-      if (this.globalData.userInfo) {
-        return this.globalData.userInfo
-      }
-      let res = await wepy.getSetting()
-      // console.log('get', res,getStore().getState())
-      if ((res.authSetting)['scope.userInfo']) {
-        let userInfo = this.globalData.userInfo
-        if (!userInfo || !userInfo.nickName) {
-          let data = await wepy.getUserInfo()
-          console.log('getUserInfo=', data)
-          if (data) {
-            this.globalData.userInfo = data.userInfo
-            // let authorData = {
-            //   author: data.userInfo
-            // }
-            if (getApp().userInfoCallback) {
-              getApp().userInfoCallback(data.userInfo);
+      let sessionkeyStatus = await this.updateSessionKey();
+      if(sessionkeyStatus){
+
+        if (this.globalData.userInfo) {
+          return this.globalData.userInfo
+        }  
+        let res = await wepy.getSetting()
+        // console.log('get', res,getStore().getState())
+        if ((res.authSetting)['scope.userInfo']) {
+          let userInfo = this.globalData.userInfo
+          if (!userInfo || !userInfo.nickName) {
+            let data = await wepy.getUserInfo()
+            console.log('getUserInfo=', data)
+            if (data) {
+              this.globalData.userInfo = data.userInfo
+              // let authorData = {
+              //   author: data.userInfo
+              // }
+              if (getApp().userInfoCallback) {
+                getApp().userInfoCallback(data.userInfo);
+              }
+              // cb && cb(data.userInfo)
+              console.log('进来',data.userInfo)
+              this.authLogin(data);
+              store.dispatch({
+                type: 'UPDATE_AUTHOR_INFO',
+                author: data.userInfo
+              });
+              // console.log('get==',store.getState(),getStore().getState())
             }
-            // cb && cb(data.userInfo)
-            console.log('进来',data.userInfo)
-            this.authLogin(data);
-            store.dispatch({
-              type: 'UPDATE_AUTHOR_INFO',
-              author: data.userInfo
-            });
-            // console.log('get==',store.getState(),getStore().getState())
           }
+        }else{
+          wepy.navigateTo({ url: '/pages/authorization-page' });
+          
         }
-      }else{
-        wepy.navigateTo({ url: '/pages/authorization-page' });
-        
       }
     }
     async getSystemInfo() {
@@ -261,12 +264,14 @@
           realUrl: true
         })
         if (res && res.code===0) {
+          return true
           console.log('获取genSessionKey',res.data)
         }else{
           tip.toast({
             title: res.msg || '获取sessionKey异常',
             icon: 'none'
           })
+          return
         }
       }
     }
