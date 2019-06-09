@@ -10,6 +10,7 @@ import {
  */
 // 登录
 const login = (params) => wxRequest(params, '/GetWeixinInfo.ashx?method=code2Session');
+const sessionKey = (params) => wxRequest(params, '/GetWeixinInfo.ashx');
 // 获取手机号
 const getTel = (params) => wxRequest(params, '/telephone');
 //获取验证码
@@ -99,5 +100,6 @@ export default {
   expressType,
   expressDetail,
   courseHandle,
-  transformClass
+  transformClass,
+  sessionKey
 }

@@ -113,11 +113,12 @@
       this.use('promisify')
     }
     onLaunch() {
+      let unionid = wepy.getStorageSync('unionid')?wepy.getStorageSync('unionid'):''
       this.$interceptors = {
         request: {
           config(p) {
             p.header = {
-              unionid: this.globalData.unionid?this.globalData.unionid:wepy.getStorageSync('unionid')
+              unionid: this.globalData.unionid?this.globalData.unionid:unionid
             };
             // if(this.globalData.unionid && this.globalData.unionid != ''){
             //   p.header = {
@@ -133,17 +134,22 @@
       };
       // this.getUserInfo();
       this.getSystemInfo();
+      this.updateSessionKey();
     }
     async authLogin(userInfo) {
+      let code = store.getState().user.code
+      if(code){
+        return await this.loginRequest(code,userInfo);
+      }
       let res = await wepy.login();
       if (res.code) {
         store.dispatch({
           type: UPDATE_CODE,
           code: res.code
         });
-        console.log('==userInfo',userInfo)
+        // console.log('==userInfo',userInfo)
         console.log('res===', res,store.getState());
-        this.loginRequest(res.code,userInfo);
+        await this.loginRequest(res.code,userInfo);
       } else {
         wepy.showToast({
           title: `登录失败! ${res.errMsg}`, //提示的内容,
@@ -231,12 +237,37 @@
         failNum++;
         // 登录失败再登录1次
         if(failNum===1){
-          return this.loginRequest();
+          return this.loginRequest(code,userInfo);
         }
         tip.toast({
-          title: loginRes.msg || '登录失败',
+          title: res.msg || '登录失败',
           icon: 'none'
         })
+      }
+    };
+    async updateSessionKey(code){
+      let lgres = await wepy.login();
+      store.dispatch({
+        type: UPDATE_CODE,
+        code: lgres.code
+      });
+      if (lgres.code) {
+        let res = await api.sessionKey({
+          query: {
+            method:'genSessionKey',
+            code: lgres.code
+          },
+          method: 'GET',
+          realUrl: true
+        })
+        if (res && res.code===0) {
+          console.log('获取genSessionKey',res.data)
+        }else{
+          tip.toast({
+            title: res.msg || '获取sessionKey异常',
+            icon: 'none'
+          })
+        }
       }
     }
   }
