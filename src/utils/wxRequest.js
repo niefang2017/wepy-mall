@@ -13,7 +13,7 @@ const codeMessage = {
   504: '网关超时。'
 };
 const wxRequest = async (params = {}, url) => {
-  // tip.loading();
+  tip.loading();
   wx.showNavigationBarLoading();
   let store = getStore();
   // let loginInfo = store.getState().user.loginInfo;
@@ -39,7 +39,9 @@ const wxRequest = async (params = {}, url) => {
       'clientType': 'wechat'
     }
   });
-  // tip.loaded();
+  if(!params.noLoaded){
+    tip.loaded();
+  }
   wx.hideNavigationBarLoading();
   if (res.statusCode === 200) {
     return res.data;

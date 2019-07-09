@@ -212,7 +212,8 @@
         query:{
           method:'GetCarousels'
         },
-        realUrl: true
+        realUrl: true,
+        noLoaded: true
       })
       if (res.code === 0 && res.data.length >0) {
         this.adList = res.data;
@@ -262,7 +263,8 @@
           method:'GetArea'
         },
         method: 'GET',
-        realUrl: true
+        realUrl: true,
+        noLoaded: true
       })
       if (res.code === 0 && res.data.length >0) {
         this.cityList = res.data;
@@ -409,7 +411,8 @@
           orgId: orgId
         },
         method: 'GET',
-        realUrl: true
+        realUrl: true,
+        noLoaded: true
       })
       if (res.code === 0) {
         await this.getAdList();
