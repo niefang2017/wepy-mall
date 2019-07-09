@@ -3,12 +3,12 @@
   <view class='page-container' style="min-height:{{systemInfo.windowHeight}}px">
     <view class="header-container">
       <view wx:if="{{cityName==='定位中...'}}" class="button">{{cityName}}<i class="iconfont icon-point"></i></view>
-      <picker wx:else bindchange="bindCityChange" value="{{cityNameIdx}}" range="{{cityList}}">
-        <view class="picker">
-          {{cityList[cityNameIdx]}}
-          <i class="iconfont icon-point"></i>
-        </view>
-      </picker>
+      <picker wx:else bindchange="bindCityChange" value="{{cityNameIdx}}" range-key="orgName" range="{{cityList}}">
+          <view class="picker">
+            {{cityList[cityNameIdx].orgName}}
+            <i class="iconfont icon-point"></i>
+          </view>
+        </picker>
       <view class="search-box">
         <view class="search-content" @tap="goSearch">
           <i class="iconfont icon-search"></i>
@@ -96,8 +96,9 @@
       totalPage:0,
       showLine: false,
       cityName:"定位中...",
-      cityList:['北京','深圳','长沙'],
-      cityNameIdx:0
+      cityList:[],
+      cityNameIdx:0,
+      orgId:''
     };
     components = {
       discover: Discover
@@ -156,23 +157,30 @@
           name: "五星官网"
         }];
         wx.navigateToMiniProgram({
-        appId: appIdArr[type].appId,
-        envVersion: 'release',
-        success(res) {
-          // 打开成功
-          console.log('打开小程序',appIdArr[type].name)
-        }
-      })
+          appId: appIdArr[type].appId,
+          envVersion: 'release',
+          success(res) {
+            // 打开成功
+            console.log('打开小程序',appIdArr[type].name)
+          }
+        })
         // return tip.toast({
         //   title: '跳转其他小程序功能提示',
         //   icon: 'none'
         // })
+      },
+      bindCityChange(e){
+        const idx= e.detail.value;
+        this.cityNameIdx = idx;
+        let orgId = this.cityList[idx].orgId;
+        this.setCity(orgId);
       }
     };
     events = {};
     watch = {};
     computed = {};
     async onLoad() {
+      await this.initCityList()
       await this.getLocationFun()
       let systemInfo = this.$parent.globalData.systemInfo;
       if (systemInfo) {
@@ -252,7 +260,21 @@
       //   this.$apply();
       // }
     };
-
+    async initCityList(){
+      let res = await api.sessionKey({
+        query:{
+          method:'GetArea'
+        },
+        method: 'GET',
+        realUrl: true
+      })
+      if (res.code === 0 && res.data.length >0) {
+        this.cityList = res.data;
+        this.$apply();
+      }else{
+        tip.error(res.msg||'获取城市列表异常')
+      }
+    }
     getLocationFun(){
       wx.getSetting({
         success: (res) => {
@@ -325,6 +347,22 @@
       })
     };
     getCity(point={}){
+      const cityList = this.cityList;
+      let now = new Date().getTime();
+      let param={}
+      let cityInfo = wepy.getStorageSync('cityInfo');
+      // 小于12小时 cityInfo && (now-cityInfo.date<=43200000)
+      if(cityList.length===0 || (cityInfo && (now-cityInfo.date<=43200000))){
+        if(cityList.length!=0){
+          let cityNameIdx= cityList.findIndex((item)=>{
+            this.cityName='深圳';
+            return item.orgName ==='深圳'
+          })
+          this.cityNameIdx = cityNameIdx || 0
+        }
+        return
+      }
+      console.log('-----',now-cityInfo.date)
       const qqmapsdk = new QQMapWX({
         key: 'FCFBZ-IHI3P-YKBDB-VSW5B-2JGQQ-H4BSP'
       })
@@ -332,21 +370,57 @@
         location:point,
         success:(res)=>{
           const cityName = res.result.ad_info.city;
-          const cityList = this.cityList;
           this.cityName=cityName.includes('市')?cityName.slice(0,cityName.length-1):cityName;
-          this.cityNameIdx = cityList.findIndex((item)=>{
-            return item === this.cityName
+          let cityNameIdx= cityList.findIndex((item)=>{
+              if(item.orgName === this.cityName){
+                param = Object.assign({},item,{'date': new Date().getTime()})
+                console.log('1param',param)
+                wepy.setStorageSync('cityInfo', param);
+                return item.orgName === this.cityName
+              }else{
+                param = Object.assign({},item,{'date': new Date().getTime()})
+                console.log('2param',param)
+                wepy.setStorageSync('cityInfo', param);
+                return item.orgName ==='深圳'
+              }
+              
           })
+          this.cityNameIdx = cityNameIdx || 0
         },
         fail:(err)=>{
-          console.log('qerrq',err)
+          let cityNameIdx= cityList.findIndex((item)=>{
+              if(item.orgName === this.cityName){
+                param = Object.assign({},item,{'date': new Date().getTime()})
+                console.log('3param',param)
+                wepy.setStorageSync('cityInfo', param);
+                return item.orgName === this.cityName
+              }else{
+                param = Object.assign({},item,{'date': new Date().getTime()})
+                console.log('4param',param)
+                wepy.setStorageSync('cityInfo', param);
+                return item.orgName ==='深圳'
+              }
+          })
+          this.cityNameIdx = cityNameIdx || 0
         }
 
       })
     };
-    bindCityChange(e){
-      const idx= e.detail.value;
-      this.cityNameIdx = idx;
+    async setCity(orgId){
+      let res = await api.sessionKey({
+        query:{
+          method:'SetArea',
+          orgId: orgId
+        },
+        method: 'GET',
+        realUrl: true
+      })
+      if (res.code === 0) {
+        await this.getAdList();
+        await this.getDiscoverList({});
+      }else{
+        tip.error(res.msg||'获取城市列表异常')
+      }
     }
   }
 </script>
