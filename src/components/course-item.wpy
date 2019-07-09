@@ -7,7 +7,7 @@
     </view>
     <view class="course-row h4">
       <div class="col-sm">
-        <image class="logo" mode="aspectFit" src="{{course.Icon}}" lazy-load="true">
+        <image class="logo" mode="aspectFit" src="{{course.Icon}}" lazy-load="true"></image>
       </div>
       <div class="col-sm">
         <view class="course-row h4">
