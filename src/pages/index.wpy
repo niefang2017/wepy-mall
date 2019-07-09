@@ -164,10 +164,6 @@
             console.log('打开小程序',appIdArr[type].name)
           }
         })
-        // return tip.toast({
-        //   title: '跳转其他小程序功能提示',
-        //   icon: 'none'
-        // })
       },
       bindCityChange(e){
         const idx= e.detail.value;
