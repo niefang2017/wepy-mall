@@ -1,10 +1,19 @@
 <!-- index 首页-->
 <template>
   <view class='page-container' style="min-height:{{systemInfo.windowHeight}}px">
-    <view class="search-box">
-      <view class="search-content" @tap="goSearch">
-        <i class="iconfont icon-search"></i>
-        <text class="h6 placeholder">搜索</text>
+    <view class="header-container">
+      <view wx:if="{{cityName==='定位中...'}}" class="button">{{cityName}}<i class="iconfont icon-point"></i></view>
+      <picker wx:else bindchange="bindCityChange" value="{{cityNameIdx}}" range="{{cityList}}">
+        <view class="picker">
+          {{cityList[cityNameIdx]}}
+          <i class="iconfont icon-point"></i>
+        </view>
+      </picker>
+      <view class="search-box">
+        <view class="search-content" @tap="goSearch">
+          <i class="iconfont icon-search"></i>
+          <text class="h6 placeholder">搜索</text>
+        </view>
       </view>
     </view>
     <swiper class="swiper" indicator-active-color="{{swiperOpts.indicatorActiveColor}}" indicator-dots="{{swiperOpts.indicatorDots}}" autoplay="{{swiperOpts.autoplay}}" interval="{{swiperOpts.interval}}" duration="{{swiperOpts.duration}}" circular="true">
@@ -63,6 +72,7 @@
   import {
     getStore
   } from 'wepy-redux';
+  const QQMapWX = require('qqmap-wx-jssdk');
   export default class Index extends wepy.page {
     config = {
       navigationBarTitleText: '五星体育运动商城',
@@ -84,7 +94,10 @@
       pageNo:1,
       pageSize:5,
       totalPage:0,
-      showLine: false
+      showLine: false,
+      cityName:"定位中...",
+      cityList:['北京','深圳','长沙'],
+      cityNameIdx:0
     };
     components = {
       discover: Discover
@@ -160,6 +173,7 @@
     watch = {};
     computed = {};
     async onLoad() {
+      await this.getLocationFun()
       let systemInfo = this.$parent.globalData.systemInfo;
       if (systemInfo) {
         this.windowHeight = systemInfo.windowHeight;
@@ -237,6 +251,102 @@
       //   this.discoverList = res.data;
       //   this.$apply();
       // }
+    };
+
+    getLocationFun(){
+      wx.getSetting({
+        success: (res) => {
+          console.log(JSON.stringify(res))
+          if (res.authSetting['scope.userLocation'] != undefined && res.authSetting['scope.userLocation'] != true) {
+            wx.showModal({
+              title: '请求授权当前位置',
+              content: '需要获取您的地理位置，请确认授权',
+              success: (res)=> {
+                if (res.cancel) {
+                  wx.showToast({
+                    title: '拒绝授权',
+                    icon: 'none',
+                    duration: 1000
+                  })
+                } else if (res.confirm) {
+                  wx.openSetting({
+                    success: (dataAu)=> {
+                      if (dataAu.authSetting["scope.userLocation"] == true) {
+                        wx.showToast({
+                          title: '授权成功',
+                          icon: 'success',
+                          duration: 1000
+                        })
+                        //再次授权，调用wx.getLocation的API
+                        wx.getLocation({
+                          type: 'wgs84',
+                          success: (res)=> {
+                            const latitude = res.latitude
+                            const longitude = res.longitude
+                            this.getCity({latitude,longitude})
+                          }
+                        })
+                        
+                      } else {
+                        wx.showToast({
+                          title: '授权失败',
+                          icon: 'none',
+                          duration: 1000
+                        })
+                      }
+                    }
+                  })
+                }
+              }
+            })
+          } else if (res.authSetting['scope.userLocation'] == undefined) {
+            //调用wx.getLocation的API
+            wx.getLocation({
+              type: 'wgs84',
+              success: (res)=> {
+                const latitude = res.latitude
+                const longitude = res.longitude
+                this.getCity({latitude,longitude})
+              }
+            })
+          }
+          else {
+            //调用wx.getLocation的API
+            wx.getLocation({
+              type: 'wgs84',
+              success: (res)=> {
+                const latitude = res.latitude
+                const longitude = res.longitude
+                this.getCity({latitude,longitude})
+              }
+            })
+          }
+        }
+      })
+    };
+    getCity(point={}){
+      const qqmapsdk = new QQMapWX({
+        key: 'FCFBZ-IHI3P-YKBDB-VSW5B-2JGQQ-H4BSP'
+      })
+      qqmapsdk.reverseGeocoder({
+        location:point,
+        success:(res)=>{
+          const cityName = res.result.ad_info.city;
+          const cityList = this.cityList;
+          this.cityName=cityName.includes('市')?cityName.slice(0,cityName.length-1):cityName;
+          this.cityNameIdx = cityList.findIndex((item)=>{
+            return item === this.cityName
+          })
+        },
+        fail:(err)=>{
+          console.log('qerrq',err)
+        }
+
+      })
+    };
+    bindCityChange(e){
+      const idx= e.detail.value;
+      this.cityNameIdx = idx;
     }
   }
 </script>
@@ -248,30 +358,57 @@
       background-color: @bg-white;
       padding: 20rpx 20rpx 0;
     }
-    .navigator-hover{
-      // background-color:  transparent;
-    }
     .navigate{
       position: relative;
       image{
         background-color: transparent;
       }
+      button {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        text-align: center;
+        line-height: 100%;
+        z-index: 1;
+      }
     }
-    button {
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
-      opacity: 0;
-      text-align: center;
-      line-height: 100%;
-      z-index: 1;
+  }
+  .header-container{
+    display: flex;
+    align-content: center;
+    background-color: @bg-white;
+    padding-bottom: 20rpx;
+    picker{
+      view{
+        padding-left: 28rpx;
+      }
+      i{
+        margin-left: 10rpx;
+        color: @color-default;
+      }
+    }
+    .button{
+      padding-left: 28rpx;
+      font-size: 30rpx;
+      font-weight: bold;
+      height: 48rpx;
+      line-height: 48rpx;
+      background-color: @bg-white;
+      i{
+        margin-left: 10rpx;
+        color: @color-default;
+      }
+    }
+    .search-box{
+      flex: 2;
     }
   }
   .search-box {
     background-color: @bg-white;
-    padding: 0 20rpx 20rpx;
+    padding: 0 20rpx 0;
     .search-content {
       display: flex;
       justify-content: center;

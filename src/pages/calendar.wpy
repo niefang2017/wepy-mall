@@ -1,12 +1,20 @@
 <!-- calendar 日历页面 -->
 <template>
-  <view class='calendar-container'>
+  <view class="calendar-container">
     <view class="calendar">
       <calendar calendar="{{calendar}}" gesture="{{gesture}}"></calendar>
     </view>
     <view class="btn-area" wx:if="{{showType!==2}}">
-      <button wx:if="{{showType===0 || showType===3}}" class="btn btn-red {{disabled?'disabled':''}}" @tap="handClick(0)">请假</button>
-      <button wx:if="{{showType===1 || showType===3}}" class="btn btn-red {{disabled?'disabled':''}}" @tap="handClick(1)">补课</button>
+      <button
+        wx:if="{{showType===0 || showType===3}}"
+        class="btn btn-red {{disabled?'disabled':''}}"
+        @tap="handClick(0)"
+      >请假</button>
+      <button
+        wx:if="{{showType===1 || showType===3}}"
+        class="btn btn-red"
+        @tap="toggleBottomPopup"
+      >我要补课</button>
     </view>
     <view class="content">
       <view class="title">{{title}}</view>
@@ -21,294 +29,408 @@
         </view>
       </repeat>
     </view>
+    <zanPopup direction="bottom">
+      <view class="btn-grounp">
+        <view class="btn" @tap="toggleBottomPopup">取消</view>
+        <view class="btn btn-red {{btnLoading?'disabled':''}}" @tap="handleMakeUpLesson">确认</view>
+      </view>
+      <picker-view
+        indicator-style="height: 50px;"
+        style="width: 100%; height: 300px;text-align:center;"
+        value="{{pickArr}}"
+        bindchange="bindDateChange"
+        bindpickstart="bindpickstart"
+        bindpickend="bindpickend"
+      >
+        <picker-view-column>
+          <view
+            wx:for="{{makeUpLessonlist}}"
+            wx:key="{{item.FID}}"
+            style="line-height: 50px"
+          >{{item.dateSort}}</view>
+        </picker-view-column>
+      </picker-view>
+    </zanPopup>
   </view>
 </template>
 
 <script>
-  import wepy from 'wepy';
-  import api from '@/api/api';
-  import tip from '@/utils/tip';
-  import initCalendar,{enableDays,disableDay,setTodoLabels,getTodoLabels} from '@/components/calendar/main.js';
-  export default class Calendarpage extends wepy.page {
-    config = {
-      navigationBarTitleText: "我的课程",
-      usingComponents: {
-        'calendar': '../../components/calendar/index'
+import wepy from 'wepy';
+import api from '@/api/api';
+import tip from '@/utils/tip';
+import initCalendar, {
+  enableDays,
+  disableDay,
+  setTodoLabels,
+  getTodoLabels
+} from '@/components/calendar/main.js';
+import zanPopup from '@/components/common/zan-popup';
+export default class Calendarpage extends wepy.page {
+  config = {
+    navigationBarTitleText: '我的课程',
+    usingComponents: {
+      calendar: '../../components/calendar/index'
+    }
+  };
+
+  data = {
+    lableList: [],
+    title: 'a项目',
+    showType: 0,
+    curseId: '',
+    studentId: '',
+    titleArr: ['请假', '补课', '取消', '课程表'],
+    actionArr: ['请假', '补课'],
+    chooseInfo: {},
+    allClassList: [],
+    enableDateList: [],
+    disabled: true,
+    auxpropid: '',
+    makeUpLessonlist: [],
+    pickArr: [0],
+    chooseLessonId: '',
+    btnLoading: false
+  };
+
+  components = {
+    zanPopup
+  };
+
+  methods = {
+    async handClick(e) {
+      let name = this.actionArr[e];
+      let chooseInfo = this.chooseInfo;
+      if (Object.keys(chooseInfo).length === 0) {
+        this.disabled = true;
       }
-    };
-
-    data = {
-      lableList:[],
-      title:'a项目',
-      showType:0,
-      curseId:'',
-      studentId:'',
-      titleArr:['请假','补课','取消','课程表'],
-      actionArr:['请假','补课'],
-      chooseInfo:{},
-      allClassList:[],
-      enableDateList:[],
-      disabled:true
-    };
-
-    components = {};
-
-    methods = {
-      async handClick(e){
-        let name = this.actionArr[e];
-        let chooseInfo  = this.chooseInfo;
-        if(Object.keys(chooseInfo).length===0){
-          this.disabled = true;
-        }
-        this.disabled = false;
-        this.$apply();
-        console.log('chooseInfo',chooseInfo,this.disabled)
-        let text = `确定${chooseInfo.year}-${chooseInfo.month}-${chooseInfo.day}${name}`
-        tip.confirm(text).then((result) => {
-          let param={
-            method:Number(e)===1?'MakeUpLessons':'AskForLeave',
+      this.disabled = false;
+      this.$apply();
+      console.log('chooseInfo', chooseInfo, this.disabled);
+      let text = `确定${chooseInfo.year}-${chooseInfo.month}-${
+        chooseInfo.day
+      }${name}`;
+      tip
+        .confirm(text)
+        .then(result => {
+          let param = {
+            method: Number(e) === 1 ? 'MakeUpLessons' : 'AskForLeave',
             custId: this.studentId,
             classId: chooseInfo.classId
-          }
-          this.handleCourse(param,name,Number(e))
-        }).catch((err) => {
+          };
+          this.handleCourse(param, name, Number(e));
+        })
+        .catch(err => {
           console.log(`取消调用${name}接口`);
         });
-      }
-    };
-
-    events = {};
-
-    watch = {};
-
-    computed = {};
-
-    async onLoad(e) {
-      this.showType = e.type?Number(e.type):0;
-      this.curseId = e.id?e.id:'';
-      this.title = e.className;
-      this.studentId=e.studentId?e.studentId:'';
-      this.$apply();
-      console.log(Number(e.type))
-      // if(Number(e.type)!==3){
-      //   wx.setNavigationBarTitle({
-      //     title: `我的${this.titleArr[Number(e.type)]}`
-      //   })
-      // }
-      wx.setNavigationBarTitle({
-        title: `我的${this.titleArr[Number(e.type)]}`
-      })
-      wx.showLoading({
-        title: '加载中...',
-        mask: true
-      });
-      if(e.id){
-        await this.getClassDetail(e.id,Number(e.type));
-        if(Number(e.type)===3){
-          await this.getList(e.id,Number(0),e.studentId)
-          await this.getList(e.id,Number(1),e.studentId)
-          await this.getList(e.id,Number(2),e.studentId)
-        }else{
-          await this.getList(e.id,Number(e.type),e.studentId)
-        }
-      }
-     };
-
-    onShow(e) { 
-    };
-    chooseData(currentSelect){
-      let allClassList = this.allClassList;
-      let {year,month,day}= currentSelect;
-      console.log('this.allClassList',allClassList,currentSelect)
-      this.disabled = !currentSelect.choosed;
-      let chooseInfo = this.chooseInfo;
-      allClassList.forEach(obj=>{
-        if(currentSelect.choosed && obj.year === year && obj.month===month && obj.day===day){
-          chooseInfo=Object.assign({},currentSelect,{classId:obj.classId})
-        }
-      })
-      this.chooseInfo = chooseInfo;
-      this.$apply();
-      console.log('this.chooseInfo=',this.chooseInfo)
+    },
+    toggleBottomPopup() {
+      console.log('dianji补课');
+      this.$invoke('zanPopup', 'togglePopup');
+    },
+    handleMakeUpLesson() {
+      const chooseLessonId = this.chooseLessonId;
+      const btnLoading = this.btnLoading;
+      if (btnLoading || !chooseLessonId) return;
+      console.log('chooseLessonId', chooseLessonId);
+      let param = {
+        method: 'MakeUpLessons',
+        custId: this.studentId,
+        classId: chooseLessonId
+      };
+      this.handleCourse(param, '补课', 1);
+      // this.$invoke('zanPopup', 'togglePopup');
+    },
+    bindDateChange(e) {
+      const val = e.detail.value;
+      const { FID } = this.makeUpLessonlist[val[0]];
+      this.chooseLessonId = FID;
+    },
+    bindpickstart(e) {
+      this.btnLoading = true;
+    },
+    bindpickend(e) {
+      this.btnLoading = false;
     }
-    initData(ctx,enableList){
-      let title = this.titleArr[this.showType]
-      console.log('允许点击日历数组',enableList)
-      
-      enableDays(enableList);
-      wx.hideLoading();
-      
-      this.$apply();
+  };
+
+  events = {};
+
+  watch = {};
+
+  computed = {};
+
+  async onLoad(e) {
+    this.showType = e.type ? Number(e.type) : 0;
+    this.curseId = e.id ? e.id : '';
+    this.title = e.className;
+    this.studentId = e.studentId ? e.studentId : '';
+    this.auxpropid = e.auxpropid ? e.auxpropid : '';
+    this.$apply();
+    console.log(Number(e.type));
+    // if(Number(e.type)!==3){
+    //   wx.setNavigationBarTitle({
+    //     title: `我的${this.titleArr[Number(e.type)]}`
+    //   })
+    // }
+    wx.setNavigationBarTitle({
+      title: `我的${this.titleArr[Number(e.type)]}`
+    });
+    wx.showLoading({
+      title: '加载中...',
+      mask: true
+    });
+    if (e.id) {
+      await this.getClassDetail(e.id, Number(e.type));
+      if (Number(e.type) === 3) {
+        await this.getList(e.id, Number(0), e.studentId);
+        await this.getList(e.id, Number(1), e.studentId);
+        await this.getList(e.id, Number(2), e.studentId);
+        await this.getClassList(e.id, e.auxpropid);
+      } else if (Number(e.type) === 1) {
+        await this.getList(e.id, Number(e.type), e.studentId);
+        await this.getClassList(e.id, e.auxpropid);
+      } else {
+        await this.getList(e.id, Number(e.type), e.studentId);
+      }
     }
-    async getClassDetail(id,type){
-      let title = this.titleArr[type]
-      let res = await api.getOrderList({
-        query:{
-          method: 'GetClassDetail',
-          materialId:id
-        },
-        method: 'GET',
-        realUrl: true
-      })
-      if(res.code===0){
-        let enableDateList = [];
-        let allClassList = [];
-        console.log(res.data,'22')
-        let data = res.data?res.data:[];
-        if(data.length>0){
-          data.map(obj=>{
-            if(obj.classdate){
-              let classdate= obj.classdate.replace(/-/g,'/');
-              let year = new Date(classdate).getFullYear(),month = new Date(classdate).getMonth()+1,day = new Date(classdate).getDate();
-              let date = `${year}-${month}-${day}`;
-              enableDateList.push(date)
-              let opt = {
-                year:year,
-                month:month,
-                day:day,
-                classId:obj.id
-              }
-              allClassList.push(opt)
-            }
-          })
-          this.enableDateList = allClassList;
-          this.allClassList = allClassList;
-          this.$apply();
-        }
-        
-        initCalendar({
-          multi: true, // 是否开启多选,
-          noDefault: true,
-          afterCalendarRender:(ctx)=> {
-            this.initData(ctx,enableDateList);
-          },
-          afterTapDay: (currentSelect) => {
-            this.chooseData(currentSelect)
-          },
+  }
+
+  onShow(e) {}
+  chooseData(currentSelect) {
+    let allClassList = this.allClassList;
+    let { year, month, day } = currentSelect;
+    console.log('this.allClassList', allClassList, currentSelect);
+    this.disabled = !currentSelect.choosed;
+    let chooseInfo = this.chooseInfo;
+    allClassList.forEach(obj => {
+      if (
+        currentSelect.choosed &&
+        obj.year === year &&
+        obj.month === month &&
+        obj.day === day
+      ) {
+        chooseInfo = Object.assign({}, currentSelect, { classId: obj.classId });
+      }
+    });
+    this.chooseInfo = chooseInfo;
+    this.$apply();
+    console.log('this.chooseInfo=', this.chooseInfo);
+  }
+  initData(ctx, enableList) {
+    let title = this.titleArr[this.showType];
+    console.log('允许点击日历数组', enableList);
+
+    enableDays(enableList);
+    wx.hideLoading();
+
+    this.$apply();
+  }
+  async getClassDetail(id, type) {
+    let title = this.titleArr[type];
+    let res = await api.getOrderList({
+      query: {
+        method: 'GetClassDetail',
+        materialId: id
+      },
+      method: 'GET',
+      realUrl: true
+    });
+    if (res.code === 0) {
+      let enableDateList = [];
+      let allClassList = [];
+      console.log(res.data, '22');
+      let data = res.data ? res.data : [];
+      if (data.length > 0) {
+        data.map(obj => {
+          if (obj.classdate) {
+            let classdate = obj.classdate.replace(/-/g, '/');
+            let year = new Date(classdate).getFullYear(),
+              month = new Date(classdate).getMonth() + 1,
+              day = new Date(classdate).getDate();
+            let date = `${year}-${month}-${day}`;
+            enableDateList.push(date);
+            let opt = {
+              year: year,
+              month: month,
+              day: day,
+              classId: obj.id
+            };
+            allClassList.push(opt);
+          }
         });
-      }else{
-        return tip.toast({
-          title: res.msg || '查询排课信息异常',
-          icon: 'none'
-        })
+        this.enableDateList = allClassList;
+        this.allClassList = allClassList;
+        this.$apply();
       }
-      console.log('res',res)
-      
-      
-    };
-    async getList(id,type,studentId){
-      let title = this.titleArr[type]
-      let method = 'GetLeaveDetail';
-      // 请假、补课、取消
-      switch (type) {
-        case 0:
-          method = 'GetLeaveDetail'
-          break;
-        case 1:
-          method = 'GetMakeUpDetail'
-          break;
-        case 2:
-          method = 'GetCancelDetail'
-          break;
-        default:
-          method = 'GetLeaveDetail'
-          break;
-      }
-      let res = await api.getOrderList({
-        query:{
-          method: method,
-          materialId:id,
-          custId:studentId?studentId:this.studentId
+
+      initCalendar({
+        multi: true, // 是否开启多选,
+        noDefault: true,
+        afterCalendarRender: ctx => {
+          this.initData(ctx, enableDateList);
         },
-        method: 'GET',
-        realUrl: true
-      })
-      if(res.code===0){
-        let lableList = [];
-        let data = res.data?res.data:[];
-        if(data.length>0){
-          data.map(obj=>{
-            if(obj.F_HQ_DATE){
-              let classdate= obj.F_HQ_DATE.replace(/-/g,'/');
-              let year = new Date(classdate).getFullYear(),month = new Date(classdate).getMonth()+1,day = new Date(classdate).getDate();
-              let opt = {
-                year:year,
-                month:month,
-                day:day,
-                todoText:title
-              }
-              lableList.push(opt)
-              disableDay([{
+        afterTapDay: currentSelect => {
+          this.chooseData(currentSelect);
+        }
+      });
+    } else {
+      return tip.toast({
+        title: res.msg || '查询排课信息异常',
+        icon: 'none'
+      });
+    }
+    console.log('res', res);
+  }
+  async getList(id, type, studentId) {
+    let title = this.titleArr[type];
+    let method = 'GetLeaveDetail';
+    // 请假、补课、取消
+    switch (type) {
+      case 0:
+        method = 'GetLeaveDetail';
+        break;
+      case 1:
+        method = 'GetMakeUpDetail';
+        break;
+      case 2:
+        method = 'GetCancelDetail';
+        break;
+      default:
+        method = 'GetLeaveDetail';
+        break;
+    }
+    let res = await api.getOrderList({
+      query: {
+        method: method,
+        materialId: id,
+        custId: studentId ? studentId : this.studentId
+      },
+      method: 'GET',
+      realUrl: true
+    });
+    if (res.code === 0) {
+      let lableList = [];
+      let data = res.data ? res.data : [];
+      if (data.length > 0) {
+        data.map(obj => {
+          if (obj.F_HQ_DATE) {
+            let classdate = obj.F_HQ_DATE.replace(/-/g, '/');
+            let year = new Date(classdate).getFullYear(),
+              month = new Date(classdate).getMonth() + 1,
+              day = new Date(classdate).getDate();
+            let opt = {
+              year: year,
+              month: month,
+              day: day,
+              todoText: title
+            };
+            lableList.push(opt);
+            disableDay([
+              {
                 year: year,
                 month: month,
-                day: day,
-              }]);
-            }
-          })
-          this.lableList[type] = lableList;
-          this.$apply();
-          setTimeout(()=>{
-            if(lableList.length>0){
-              setTodoLabels({
-                pos: 'bottom', // 待办点标记位置 ['top', 'bottom']
-                dotColor: '#40', // 待办点标记颜色
-                days: lableList,
-              });
-            }
-          },100)
-        }
-      }else{
-        return tip.toast({
-          title: res.msg || '查询信息异常',
-          icon: 'none'
-        })
+                day: day
+              }
+            ]);
+          }
+        });
+        this.lableList[type] = lableList;
+        this.$apply();
+        setTimeout(() => {
+          if (lableList.length > 0) {
+            setTodoLabels({
+              pos: 'bottom', // 待办点标记位置 ['top', 'bottom']
+              dotColor: '#40', // 待办点标记颜色
+              days: lableList
+            });
+          }
+        }, 100);
       }
-      
-    }; 
-    async handleCourse(param,text,type){
-      let res = await api.courseHandle({
-        query:{
-          ...param
-        },
-        method: 'GET',
-        realUrl: true
-      })
-      if(res.code===0){
-        // 更新备注记录
-        tip.success(`${text}成功`)
-        await this.getList(this.curseId,type)
-        let {year,month,day} = this.chooseInfo;
-        disableDay([{
+    } else {
+      return tip.toast({
+        title: res.msg || '查询信息异常',
+        icon: 'none'
+      });
+    }
+  }
+  async handleCourse(param, text, type) {
+    let res = await api.courseHandle({
+      query: {
+        ...param
+      },
+      method: 'GET',
+      realUrl: true
+    });
+    if (res.code === 0) {
+      // 更新备注记录
+      tip.success(`${text}成功`);
+      await this.getList(this.curseId, type);
+      if (type === 1) {
+        this.$invoke('zanPopup', 'togglePopup');
+      }
+      let { year, month, day } = this.chooseInfo;
+      disableDay([
+        {
           year: year,
           month: month,
-          day: day,
-        }]);
-        this.disabled = true;
-        this.$apply();
-      }else{
-        return tip.toast({
-          title: res.msg || '提交异常',
-          icon: 'none'
-        })
-      }
+          day: day
+        }
+      ]);
+      this.disabled = true;
+      this.$apply();
+    } else {
+      return tip.toast({
+        title: res.msg || '提交异常',
+        icon: 'none'
+      });
     }
-
   }
+  async getClassList(materialId, auxpropid) {
+    let res = await api.courseHandle({
+      query: {
+        method: 'GetRefDayClassInfo',
+        materialId: materialId,
+        auxpropid: auxpropid
+      },
+      method: 'GET',
+      realUrl: true
+    });
+    if (res.code === 0) {
+      // 更新补课列表
+      if (!res.data || res.data.length === 0) return;
+      let list = res.data.filter(item => {
+        if (item.FID && item.F_PAEZ_DATE) {
+          item.dateSort = item.F_PAEZ_DATE.slice(0, 10);
+          return item;
+        }
+      });
+      this.makeUpLessonlist = list;
+      this.chooseLessonId = list[0].FID;
+      this.$apply();
+      console.log('list', list);
+    } else {
+      return tip.toast({
+        title: res.msg || '查询补课列表异常',
+        icon: 'none'
+      });
+    }
+  }
+}
 </script>
 
 <style lang='less'>
-page{
+page {
   background-color: #fff;
 }
-.calendar-container{
-  .calendar{
+.calendar-container {
+  .calendar {
     background-color: #fff;
   }
-  .content{
+  .content {
     background-color: #fff;
     padding: 26rpx;
-    .all-choose{
-      .item{
+    .all-choose {
+      .item {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -319,17 +441,35 @@ page{
       }
     }
   }
-  .btn-area{
+  .btn-area {
     padding: 20rpx;
     background-color: #f5f5f5;
     text-align: right;
     height: 70rpx;
-    .btn{
+    .btn {
       display: inline-block;
       line-height: 70rpx;
       height: 70rpx;
-      min-width: 180rpx;
+      font-size: 26rpx;
+      min-width: 120rpx;
       margin-right: 26rpx;
+    }
+  }
+  .zan-popup__container {
+    .btn-grounp {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20rpx;
+      .btn {
+        width: 120rpx;
+        height: 64rpx;
+        line-height: 64rpx;
+        font-size: 26rpx;
+        font-weight: 64rpx;
+        text-align: center;
+        border-radius: 6rpx;
+      }
     }
   }
 }
