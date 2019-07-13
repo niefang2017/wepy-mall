@@ -2,7 +2,7 @@
 <template>
   <view class="calendar-container">
     <view class="calendar">
-      <calendar calendar="{{calendar}}" gesture="{{gesture}}"></calendar>
+      <calendar calendar="{{calendar}}" calendarConfig="{{calendarConfig}}" gesture="{{gesture}}"></calendar>
     </view>
     <view class="btn-area" wx:if="{{showType!==2}}">
       <button
@@ -69,6 +69,10 @@ export default class Calendarpage extends wepy.page {
     disabled: true,
     auxpropid: '',
     makeUpLessonlist: [],
+    calendarConfig:{
+      multi: true, // 是否开启多选,
+      noDefault: true
+    },
     idx: 0
   };
 
@@ -164,6 +168,7 @@ export default class Calendarpage extends wepy.page {
   onShow(e) {}
   chooseData(currentSelect) {
     let allClassList = this.allClassList;
+    console.log('切换',allClassList)
     let { year, month, day } = currentSelect;
     console.log('this.allClassList', allClassList, currentSelect);
     this.disabled = !currentSelect.choosed;
@@ -184,6 +189,7 @@ export default class Calendarpage extends wepy.page {
   }
   initData(ctx, enableList) {
     let title = this.titleArr[this.showType];
+    // enableList = this.enableDateList;
     console.log('允许点击日历数组', enableList);
 
     enableDays(enableList);
@@ -193,6 +199,9 @@ export default class Calendarpage extends wepy.page {
   }
   async getClassDetail(id, type,auxpropId) {
     let title = this.titleArr[type];
+    let enableDateList = [];
+    let allClassList = [];
+    let Num = 0;
     let res = await api.getOrderList({
       query: {
         method: 'GetClassDetail',
@@ -203,8 +212,6 @@ export default class Calendarpage extends wepy.page {
       realUrl: true
     });
     if (res.code === 0) {
-      let enableDateList = [];
-      let allClassList = [];
       console.log(res.data, '22');
       let data = res.data ? res.data : [];
       if (data.length > 0) {
@@ -229,17 +236,28 @@ export default class Calendarpage extends wepy.page {
         this.allClassList = allClassList;
         this.$apply();
       }
-
-      initCalendar({
+      console.log('enableDateList',enableDateList)
+      let calendarConfig= {
         multi: true, // 是否开启多选,
         noDefault: true,
         afterCalendarRender: ctx => {
           this.initData(ctx, enableDateList);
+          Num++
         },
         afterTapDay: currentSelect => {
           this.chooseData(currentSelect);
+          // enableDays(enableDateList);
+        },
+        whenChangeMonth:(current, next) => {
+          if(Num===0) return
+          console.log('next',next,enableDateList)
+          setTimeout(()=>{
+            enableDays(enableDateList);
+          },100)
         }
-      });
+      }
+      this.calendarConfig = calendarConfig;
+      initCalendar(calendarConfig);
     } else {
       return tip.toast({
         title: res.msg || '查询排课信息异常',
