@@ -146,7 +146,7 @@ export default class Calendarpage extends wepy.page {
       mask: true
     });
     if (e.id) {
-      await this.getClassDetail(e.id, Number(e.type),e.auxpropId);
+      await this.getClassDetail(e.id, Number(e.type),e.auxpropid);
       if (Number(e.type) === 3) {
         await this.getList(e.id, Number(0), e.studentId);
         await this.getList(e.id, Number(1), e.studentId);
