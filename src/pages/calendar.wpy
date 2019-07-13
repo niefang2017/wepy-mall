@@ -146,7 +146,7 @@ export default class Calendarpage extends wepy.page {
       mask: true
     });
     if (e.id) {
-      await this.getClassDetail(e.id, Number(e.type));
+      await this.getClassDetail(e.id, Number(e.type),e.auxpropId);
       if (Number(e.type) === 3) {
         await this.getList(e.id, Number(0), e.studentId);
         await this.getList(e.id, Number(1), e.studentId);
@@ -191,12 +191,13 @@ export default class Calendarpage extends wepy.page {
 
     this.$apply();
   }
-  async getClassDetail(id, type) {
+  async getClassDetail(id, type,auxpropId) {
     let title = this.titleArr[type];
     let res = await api.getOrderList({
       query: {
         method: 'GetClassDetail',
-        materialId: id
+        materialId: id,
+        auxpropId:auxpropId
       },
       method: 'GET',
       realUrl: true
