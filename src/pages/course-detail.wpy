@@ -343,6 +343,7 @@
       },
       jiaBtnTap(e) {
         let numbers = this.opts.number;
+        console.log('this.orderNum,numbers+++',this.orderNum,numbers)
         if (this.orderNum >= numbers) return
         this.orderNum++;
       },
@@ -354,13 +355,20 @@
       bindOrderNumInput(e) {
         let numbers = this.opts.number;
         let val = e.detail.value;
-        if (Number(val) >= Number(numbers)) {
-          return this.orderNum = numbers;
-        }
         if (val < 1) {
-          return this.orderNum = 1;
+          this.orderNum = 1;
+          this.$apply();
+          return
         }
-        this.$apply();
+        if (Number(val) >= Number(numbers)) {
+          this.orderNum = numbers;
+          this.$apply();
+          return
+        }else{
+          this.orderNum=Number(val)
+          this.$apply();
+        }
+        console.log('numbers,val',numbers,val)
       },
       openCart() {
         wepy.switchTab({
